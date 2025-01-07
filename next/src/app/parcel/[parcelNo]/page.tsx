@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 const ParcelDetails: React.FC = () => {
   const params = useParams();
   const parcelNo = params.parcelNo as string;
 
-  // Local states for property fields (fetched from the server)
   const [shapeArea, setShapeArea] = useState<number>(0);
   const [latitude, setLatitude] = useState<number>(0);
   const [longitude, setLongitude] = useState<number>(0);
@@ -17,40 +18,23 @@ const ParcelDetails: React.FC = () => {
   const [sewer, setSewer] = useState<string>("connected");
   const [nzpCode, setNzpCode] = useState<string>("RESIDENTIAL");
 
-  // This is the only field the user enters manually:
   const [numOfRoads, setNumOfRoads] = useState<number>(0);
 
-  // Prediction result/error
   const [prediction, setPrediction] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Guard clause if no parcelNo in URL
   if (!parcelNo) {
     return <div>Invalid request. No parcel number in URL.</div>;
   }
 
-  // 1. Auto-fetch existing property details once the component mounts
-  //    from e.g. GET http://localhost:4000/parcelData/:parcelNo
   useEffect(() => {
     const fetchParcelData = async () => {
       try {
-        const response = await fetch(`http://localhost:4000/parcelData/${parcelNo}`);
+        const response = await fetch(`${API_URL}/parcelData/${parcelNo}`);
         if (!response.ok) {
           throw new Error(`Fetch error: ${response.status}`);
         }
         const data = await response.json();
-
-        // Example structure: {
-        //   parcel_no: "12345",
-        //   shape_area: 1000,
-        //   latitude: 26.22,
-        //   longitude: 50.55,
-        //   roads: "asphalt",
-        //   ewa_edd: "abc",
-        //   ewa_wdd: "def",
-        //   sewer: "connected",
-        //   nzp_code: "RESIDENTIAL"
-        // }
         setShapeArea(data.shape_area);
         setLatitude(data.latitude);
         setLongitude(data.longitude);
@@ -59,7 +43,6 @@ const ParcelDetails: React.FC = () => {
         setEwaWdd(data.ewa_wdd);
         setSewer(data.sewer);
         setNzpCode(data.nzp_code);
-        // We don't set numOfRoads from DB, because user enters it manually
       } catch (err: any) {
         console.error("Error fetching parcel data:", err);
       }
@@ -68,13 +51,11 @@ const ParcelDetails: React.FC = () => {
     fetchParcelData();
   }, [parcelNo]);
 
-  // 2. Handle the "Predict" button
   const handlePredict = async () => {
     try {
       setError(null);
       setPrediction(null);
 
-      // Build request with all model features + user-entered numOfRoads
       const requestBody = {
         parcelNo,
         shape_area: shapeArea,
@@ -85,10 +66,10 @@ const ParcelDetails: React.FC = () => {
         ewa_wdd: ewaWdd,
         sewer,
         nzp_code: nzpCode,
-        num_of_roads: numOfRoads, // Only manual input
+        num_of_roads: numOfRoads, 
       };
 
-      const response = await fetch("http://localhost:4000/predict", {
+      const response = await fetch(`${API_URL}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
@@ -98,7 +79,6 @@ const ParcelDetails: React.FC = () => {
         throw new Error(`Request failed with status ${response.status}`);
       }
 
-      // Example response: { success: true, prediction: 123456 }
       const data = await response.json();
       setPrediction(data.prediction);
     } catch (err: any) {
@@ -111,7 +91,6 @@ const ParcelDetails: React.FC = () => {
       <h2>Parcel Details</h2>
       <p>Parcel Number: {parcelNo}</p>
 
-      {/* Fields that were automatically fetched */}
       <div style={{ marginTop: "1rem" }}>
         <label>
           Shape Area:
@@ -208,7 +187,6 @@ const ParcelDetails: React.FC = () => {
         </label>
       </div>
 
-      {/* The only field user must enter: numOfRoads */}
       <div style={{ marginTop: "1rem" }}>
         <label>
           Number of Roads:

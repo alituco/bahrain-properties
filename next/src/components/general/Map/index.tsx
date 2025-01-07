@@ -6,6 +6,8 @@ import axios from "axios";
 import { Box, styled, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 // Initialize Mapbox access token
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -32,7 +34,7 @@ const MapComponent: React.FC = () => {
     const fetchGeoJSON = async () => {
       try {
         const response = await axios.get<GeoJSON.FeatureCollection<GeoJSON.Polygon>>(
-          "http://localhost:4000/coordinates", 
+          `${API_URL}/coordinates`, 
           { timeout: 95000 }
         );
         console.log("Fetched GeoJSON Data:", response.data); // Log the fetched GeoJSON data
