@@ -9,6 +9,7 @@ const ParcelDetails: React.FC = () => {
   const params = useParams();
   const parcelNo = params.parcelNo as string;
 
+  // State hooks at top level
   const [shapeArea, setShapeArea] = useState<number>(0);
   const [latitude, setLatitude] = useState<number>(0);
   const [longitude, setLongitude] = useState<number>(0);
@@ -17,17 +18,19 @@ const ParcelDetails: React.FC = () => {
   const [ewaWdd, setEwaWdd] = useState<string>("def");
   const [sewer, setSewer] = useState<string>("connected");
   const [nzpCode, setNzpCode] = useState<string>("RESIDENTIAL");
-
   const [numOfRoads, setNumOfRoads] = useState<number>(0);
 
   const [prediction, setPrediction] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (!parcelNo) {
-    return <div>Invalid request. No parcel number in URL.</div>;
-  }
-
+  /**
+   * 1) Always call useEffect at the top level
+   * 2) Conditionally skip logic inside the effect if parcelNo is missing
+   */
   useEffect(() => {
+    // If there's no parcelNo, skip fetching
+    if (!parcelNo) return;
+
     const fetchParcelData = async () => {
       try {
         const response = await fetch(`${API_URL}/parcelData/${parcelNo}`);
@@ -43,18 +46,26 @@ const ParcelDetails: React.FC = () => {
         setEwaWdd(data.ewa_wdd);
         setSewer(data.sewer);
         setNzpCode(data.nzp_code);
-      } catch (err: any) {
-        console.error("Error fetching parcel data:", err);
+      } catch (err) {
+        const error = err as Error;
+        console.error("Error fetching parcel data:", error);
       }
     };
 
     fetchParcelData();
   }, [parcelNo]);
 
+  // Prediction handler
   const handlePredict = async () => {
     try {
       setError(null);
       setPrediction(null);
+
+      // If there's no parcelNo, show error or just return
+      if (!parcelNo) {
+        setError("Invalid request. No parcel number.");
+        return;
+      }
 
       const requestBody = {
         parcelNo,
@@ -66,7 +77,7 @@ const ParcelDetails: React.FC = () => {
         ewa_wdd: ewaWdd,
         sewer,
         nzp_code: nzpCode,
-        num_of_roads: numOfRoads, 
+        num_of_roads: numOfRoads,
       };
 
       const response = await fetch(`${API_URL}/predict`, {
@@ -81,10 +92,17 @@ const ParcelDetails: React.FC = () => {
 
       const data = await response.json();
       setPrediction(data.prediction);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message);
     }
   };
+
+  // Conditionally render based on parcelNo
+  // (Now, we've already called all our hooks, so no hooking order issues)
+  if (!parcelNo) {
+    return <div>Invalid request. No parcel number in URL.</div>;
+  }
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -97,7 +115,7 @@ const ParcelDetails: React.FC = () => {
           <input
             type="number"
             value={shapeArea}
-            onChange={(e) => setShapeArea(+e.target.value)}
+            onChange={(e) => setShapeArea(Number(e.target.value))}
             style={{ marginLeft: "0.5rem" }}
           />
         </label>
@@ -109,7 +127,7 @@ const ParcelDetails: React.FC = () => {
           <input
             type="number"
             value={latitude}
-            onChange={(e) => setLatitude(+e.target.value)}
+            onChange={(e) => setLatitude(Number(e.target.value))}
             style={{ marginLeft: "0.5rem" }}
           />
         </label>
@@ -121,7 +139,7 @@ const ParcelDetails: React.FC = () => {
           <input
             type="number"
             value={longitude}
-            onChange={(e) => setLongitude(+e.target.value)}
+            onChange={(e) => setLongitude(Number(e.target.value))}
             style={{ marginLeft: "0.5rem" }}
           />
         </label>
@@ -193,7 +211,7 @@ const ParcelDetails: React.FC = () => {
           <input
             type="number"
             value={numOfRoads}
-            onChange={(e) => setNumOfRoads(+e.target.value)}
+            onChange={(e) => setNumOfRoads(Number(e.target.value))}
             style={{ marginLeft: "0.5rem" }}
           />
         </label>
