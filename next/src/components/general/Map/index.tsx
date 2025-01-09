@@ -35,7 +35,7 @@ const MapComponent: React.FC = () => {
       try {
         const response = await axios.get<GeoJSON.FeatureCollection<GeoJSON.Polygon>>(
           `${API_URL}/coordinates`, 
-          { timeout: 95000 }
+          { timeout: 950000000 }
         );
         console.log("Fetched GeoJSON Data:", response.data); // Log the fetched GeoJSON data
         setTotalProperties(response.data.features.length);

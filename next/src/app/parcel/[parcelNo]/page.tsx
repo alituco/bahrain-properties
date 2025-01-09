@@ -5,11 +5,79 @@ import { useParams } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// --- Inline style objects ---
+const containerStyle = {
+  padding: "2rem",
+  backgroundColor: "#fdfdfd",
+  borderRadius: "8px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+  maxWidth: "600px",
+  margin: "2rem auto",
+  fontFamily: "'Arial', sans-serif",
+};
+
+const headingStyle = {
+  fontSize: "1.8rem",
+  marginBottom: "1rem",
+  color: "#333",
+  textAlign: "center" as const,
+};
+
+const infoContainerStyle = {
+  marginBottom: "1.5rem",
+};
+
+const infoRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  marginBottom: "0.75rem",
+};
+
+const labelStyle = {
+  fontWeight: "bold",
+  color: "#555",
+};
+
+const valueStyle = {
+  color: "#333",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "0.5rem",
+  marginTop: "0.25rem",
+  borderRadius: "4px",
+  border: "1px solid #ccc",
+  fontSize: "1rem",
+};
+
+const buttonStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#0070f3",
+  color: "#fff",
+  border: "none",
+  borderRadius: "4px",
+  fontSize: "1rem",
+  cursor: "pointer",
+  marginTop: "1rem",
+};
+
+const errorStyle = {
+  color: "red",
+  marginTop: "1rem",
+};
+
+const predictionStyle = {
+  marginTop: "1rem",
+  fontSize: "1.2rem",
+  color: "#006400",
+};
+
 const ParcelDetails: React.FC = () => {
   const params = useParams();
   const parcelNo = params.parcelNo as string;
 
-  // State hooks at top level
+  // State
   const [shapeArea, setShapeArea] = useState<number>(0);
   const [latitude, setLatitude] = useState<number>(0);
   const [longitude, setLongitude] = useState<number>(0);
@@ -23,12 +91,8 @@ const ParcelDetails: React.FC = () => {
   const [prediction, setPrediction] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * 1) Always call useEffect at the top level
-   * 2) Conditionally skip logic inside the effect if parcelNo is missing
-   */
+  // Fetch parcel data if we have a parcelNo
   useEffect(() => {
-    // If there's no parcelNo, skip fetching
     if (!parcelNo) return;
 
     const fetchParcelData = async () => {
@@ -47,21 +111,19 @@ const ParcelDetails: React.FC = () => {
         setSewer(data.sewer);
         setNzpCode(data.nzp_code);
       } catch (err) {
-        const error = err as Error;
-        console.error("Error fetching parcel data:", error);
+        console.error("Error fetching parcel data:", err);
       }
     };
 
     fetchParcelData();
   }, [parcelNo]);
 
-  // Prediction handler
+  // Handle prediction
   const handlePredict = async () => {
     try {
       setError(null);
       setPrediction(null);
 
-      // If there's no parcelNo, show error or just return
       if (!parcelNo) {
         setError("Invalid request. No parcel number.");
         return;
@@ -93,142 +155,94 @@ const ParcelDetails: React.FC = () => {
       const data = await response.json();
       setPrediction(data.prediction);
     } catch (err) {
-      const error = err as Error;
-      setError(error.message);
+      setError((err as Error).message);
     }
   };
 
-  // Conditionally render based on parcelNo
-  // (Now, we've already called all our hooks, so no hooking order issues)
   if (!parcelNo) {
     return <div>Invalid request. No parcel number in URL.</div>;
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h2>Parcel Details</h2>
-      <p>Parcel Number: {parcelNo}</p>
+    <div style={containerStyle}>
+      <h2 style={headingStyle}>Parcel Details</h2>
+      <p style={{ textAlign: "center", marginBottom: "2rem" }}>
+        Parcel Number: <strong>{parcelNo}</strong>
+      </p>
 
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          Shape Area:
-          <input
-            type="number"
-            value={shapeArea}
-            onChange={(e) => setShapeArea(Number(e.target.value))}
-            style={{ marginLeft: "0.5rem" }}
-          />
-        </label>
+      {/* Info container */}
+      <div style={infoContainerStyle}>
+        {/* Shape Area */}
+        <div style={infoRowStyle}>
+          <div style={labelStyle}>Shape Area:</div>
+          <div style={valueStyle}>{shapeArea}</div>
+        </div>
+
+        {/* Latitude */}
+        <div style={infoRowStyle}>
+          <div style={labelStyle}>Latitude:</div>
+          <div style={valueStyle}>{latitude}</div>
+        </div>
+
+        {/* Longitude */}
+        <div style={infoRowStyle}>
+          <div style={labelStyle}>Longitude:</div>
+          <div style={valueStyle}>{longitude}</div>
+        </div>
+
+        {/* Roads */}
+        <div style={infoRowStyle}>
+          <div style={labelStyle}>Roads:</div>
+          <div style={valueStyle}>{roads}</div>
+        </div>
+
+        {/* EWA EDD */}
+        <div style={infoRowStyle}>
+          <div style={labelStyle}>EWA EDD:</div>
+          <div style={valueStyle}>{ewaEdd}</div>
+        </div>
+
+        {/* EWA WDD */}
+        <div style={infoRowStyle}>
+          <div style={labelStyle}>EWA WDD:</div>
+          <div style={valueStyle}>{ewaWdd}</div>
+        </div>
+
+        {/* Sewer */}
+        <div style={infoRowStyle}>
+          <div style={labelStyle}>Sewer:</div>
+          <div style={valueStyle}>{sewer}</div>
+        </div>
+
+        {/* NZP Code */}
+        <div style={infoRowStyle}>
+          <div style={labelStyle}>NZP Code:</div>
+          <div style={valueStyle}>{nzpCode}</div>
+        </div>
       </div>
 
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          Latitude:
-          <input
-            type="number"
-            value={latitude}
-            onChange={(e) => setLatitude(Number(e.target.value))}
-            style={{ marginLeft: "0.5rem" }}
-          />
-        </label>
+      {/* Number of Roads (Only editable input) */}
+      <div style={{ marginBottom: "1rem" }}>
+        <label style={labelStyle}>Number of Roads:</label>
+        <input
+          type="number"
+          value={numOfRoads}
+          onChange={(e) => setNumOfRoads(Number(e.target.value))}
+          style={inputStyle}
+        />
       </div>
 
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          Longitude:
-          <input
-            type="number"
-            value={longitude}
-            onChange={(e) => setLongitude(Number(e.target.value))}
-            style={{ marginLeft: "0.5rem" }}
-          />
-        </label>
-      </div>
-
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          Roads:
-          <input
-            type="text"
-            value={roads}
-            onChange={(e) => setRoads(e.target.value)}
-            style={{ marginLeft: "0.5rem" }}
-          />
-        </label>
-      </div>
-
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          EWA EDD:
-          <input
-            type="text"
-            value={ewaEdd}
-            onChange={(e) => setEwaEdd(e.target.value)}
-            style={{ marginLeft: "0.5rem" }}
-          />
-        </label>
-      </div>
-
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          EWA WDD:
-          <input
-            type="text"
-            value={ewaWdd}
-            onChange={(e) => setEwaWdd(e.target.value)}
-            style={{ marginLeft: "0.5rem" }}
-          />
-        </label>
-      </div>
-
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          Sewer:
-          <input
-            type="text"
-            value={sewer}
-            onChange={(e) => setSewer(e.target.value)}
-            style={{ marginLeft: "0.5rem" }}
-          />
-        </label>
-      </div>
-
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          NZP Code:
-          <input
-            type="text"
-            value={nzpCode}
-            onChange={(e) => setNzpCode(e.target.value)}
-            style={{ marginLeft: "0.5rem" }}
-          />
-        </label>
-      </div>
-
-      <div style={{ marginTop: "1rem" }}>
-        <label>
-          Number of Roads:
-          <input
-            type="number"
-            value={numOfRoads}
-            onChange={(e) => setNumOfRoads(Number(e.target.value))}
-            style={{ marginLeft: "0.5rem" }}
-          />
-        </label>
-      </div>
-
-      <button onClick={handlePredict} style={{ marginTop: "1rem" }}>
+      {/* Predict button */}
+      <button onClick={handlePredict} style={buttonStyle}>
         Predict
       </button>
 
-      {error && (
-        <div style={{ color: "red", marginTop: "1rem" }}>
-          Error: {error}
-        </div>
-      )}
+      {/* Error display */}
+      {error && <div style={errorStyle}>Error: {error}</div>}
 
+      {/* Prediction display */}
       {prediction !== null && !error && (
-        <div style={{ marginTop: "1rem" }}>
+        <div style={predictionStyle}>
           <b>Predicted Valuation:</b> {prediction} BHD
         </div>
       )}
