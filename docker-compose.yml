@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: bahrain-properties-backend
+    restart: always
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "4000:4000"
+
+  model:
+    build: ./model
+    container_name: bahrain-properties-model
+    restart: always
+    networks:
+      - app-network
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build: ./next
+    container_name: bahrain-properties-frontend
+    restart: always
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3002:3000"  # Host port 3002 to avoid conflict with the first app
+
+networks:
+  app-network:
+    external: true

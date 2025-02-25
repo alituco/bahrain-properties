@@ -1,0 +1,42 @@
+name: Deploy on Master Push
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout your repository code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up SSH so that the runner can connect to your VPS
+      - name: Set up SSH Agent
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # Step 3: Connect to your VPS and deploy using Docker Compose
+      - name: Deploy on VPS using Docker Compose
+        run: |
+          ssh -o StrictHostKeyChecking=no root@147.182.185.158 << 'EOF'
+            set -e  # Exit immediately if any command fails
+
+            # Navigate to your project directory on the VPS
+            cd bahrain-properties/
+
+            # Pull the latest code
+            git pull origin master
+
+            # Ensure network exists (avoids errors if it doesn't)
+            docker network create app-network || true
+
+            # Rebuild and restart all services using docker-compose
+            docker-compose up -d --build
+
+            # Clean up old, unused images to save disk space
+            docker image prune -f
+          EOF
