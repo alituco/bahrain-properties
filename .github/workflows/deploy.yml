@@ -19,8 +19,8 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Step 3: Connect to your VPS and perform the deployment
-      - name: Deploy on VPS using Docker
+      # Step 3: Connect to your VPS and deploy using Docker Compose
+      - name: Deploy on VPS using Docker Compose
         run: |
           ssh -o StrictHostKeyChecking=no root@147.182.185.158 << 'EOF'
             set -e  # Exit immediately if any command fails
@@ -28,34 +28,15 @@ jobs:
             # Navigate to your project directory on the VPS
             cd bahrain-properties/
 
-            # Update the code to the latest master branch version
+            # Pull the latest code
             git pull origin master
 
-            # --- Build and Deploy Backend ---
-            cd backend
-            echo "Building backend Docker image..."
-            docker build -t my-backend:latest .
-            echo "Stopping and removing any running backend container..."
-            docker rm -f my-backend || true
-            echo "Running backend container..."
-            docker run -d --name my-backend -p 4000:4000 my-backend:latest
+            # Ensure network exists (avoids errors if it doesn't)
+            docker network create app-network || true
 
-            # --- Build and Deploy Frontend ---
-            cd ../frontend
-            echo "Building frontend Docker image..."
-            docker build -t my-frontend:latest .
-            echo "Stopping and removing any running frontend container..."
-            docker rm -f my-frontend || true
-            echo "Running frontend container..."
-            docker run -d --name my-frontend -p 3000:3000 my-frontend:latest
+            # Rebuild and restart all services using docker-compose
+            docker-compose up -d --build
 
-            # --- Build and Deploy Model Service ---
-            cd ../model
-            echo "Building model Docker image..."
-            docker build -t my-model:latest .
-            echo "Stopping and removing any running model container..."
-            docker rm -f my-model || true
-            echo "Running model container..."
-            docker run -d --name my-model -p 5000:5000 my-model:latest
-
+            # Clean up old, unused images to save disk space
+            docker image prune -f
           EOF
