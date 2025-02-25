@@ -22,7 +22,7 @@ export default function AddValuationPage() {
     setMessage('');   
     try {
       // 1. Ensure the parcel is in the DB
-      const ensureResponse = await fetch(`http://localhost:4000/ensureParcel/${parcelNo}`);
+      const ensureResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ensureParcel/${parcelNo}`);
       const ensureData = await ensureResponse.json();
       if (!ensureData.success) {
         setMessage(`Property for parcel ${parcelNo} could not be fetched.`);
@@ -30,7 +30,7 @@ export default function AddValuationPage() {
       }
       
       // 2. Add the valuation
-      const response = await fetch('http://localhost:4000/addValuation', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/addValuation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
