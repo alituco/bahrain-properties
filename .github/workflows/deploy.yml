@@ -26,7 +26,7 @@ jobs:
             set -e  # Exit immediately if any command fails
 
             # Navigate to your project directory on the VPS
-            cd /path/to/your/project
+            cd bahrain-properties/
 
             # Update the code to the latest master branch version
             git pull origin master
