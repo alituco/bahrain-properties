@@ -24,6 +24,16 @@ const pool = new Pool({
   },
 });
 
+// ---------------------------------------------------------------------
+// HELPER: Build the base URL from env, then append endpoints
+// ---------------------------------------------------------------------
+const flaskBaseUrl = process.env.FLASK_URL || 'http://localhost:5001';
+const flaskPredictUrl = `${flaskBaseUrl}/predict`;
+const flaskFetchParcelUrl = `${flaskBaseUrl}/fetchParcel`;
+
+// ---------------------------------------------------------------------
+// GET /coordinates
+// ---------------------------------------------------------------------
 app.get('/coordinates', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -51,6 +61,9 @@ app.get('/coordinates', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------
+// GET /parcelData/:parcelNo
+// ---------------------------------------------------------------------
 app.get('/parcelData/:parcelNo', async (req, res) => {
   try {
     const { parcelNo } = req.params;
@@ -81,12 +94,15 @@ app.get('/parcelData/:parcelNo', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------
+// POST /predict (calls Flask /predict)
+// ---------------------------------------------------------------------
 app.post('/predict', async (req, res) => {
   try {
     const inputData = req.body;
 
-    const flaskUrl = process.env.FLASK_URL || 'http://localhost:5001/predict';
-    const flaskResponse = await axios.post(flaskUrl, inputData, { timeout: 10000 });
+    // Now calls something like http://localhost:5001/predict
+    const flaskResponse = await axios.post(flaskPredictUrl, inputData, { timeout: 10000 });
 
     return res.json({
       success: true,
@@ -102,6 +118,107 @@ app.post('/predict', async (req, res) => {
   }
 });
 
+app.post('/addValuation', async (req, res) => {
+  try {
+    const {
+      password,
+      parcel_no,
+      valuation_type,
+      valuation_amount,
+      agent_name,
+      num_of_roads,
+      listing_size
+    } = req.body;
+
+    // 1. Check password
+    if (password !== '93939393') {
+      return res.status(403).json({ success: false, message: 'Invalid password.' });
+    }
+
+    // 2. Check if the property exists in the "properties" table
+    const propertyResult = await pool.query(
+      "SELECT 1 FROM properties WHERE parcel_no = $1 LIMIT 1;",
+      [parcel_no]
+    );
+
+    // 2a. If property doesn't exist, attempt to fetch it via the Flask endpoint
+    if (propertyResult.rows.length === 0) {
+      const flaskResponse = await axios.post(flaskFetchParcelUrl, { parcel_no }, { timeout: 10000 });
+      if (!flaskResponse.data.success) {
+         return res.status(404).json({
+           success: false,
+           message: 'Property not found and could not be fetched.'
+         });
+      }
+    }
+
+    // 3. Now that we know the property is in "properties",
+    //    check if this EXACT valuation type for this parcel already exists.
+    const existingValuation = await pool.query(`
+      SELECT 1 
+      FROM valuations 
+      WHERE parcel_no = $1 AND valuation_type = $2
+      LIMIT 1;
+    `, [parcel_no, valuation_type]);
+
+    if (existingValuation.rows.length > 0) {
+      // The parcel + valuation_type combo is already in valuations table
+      return res.status(400).json({
+        success: false,
+        message: 'This valuation already exists for that parcel.'
+      });
+    }
+
+    // 4. Insert the valuation now that it's guaranteed to be unique
+    const insertQuery = `
+      INSERT INTO valuations (
+        parcel_no,
+        valuation_type,
+        valuation_amount,
+        agent_name,
+        num_of_roads,
+        listing_size
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `;
+    await pool.query(insertQuery, [
+      parcel_no,
+      valuation_type,
+      valuation_amount,
+      agent_name,
+      num_of_roads,
+      listing_size
+    ]);
+
+    return res.json({ success: true, message: 'Valuation inserted successfully.' });
+  } catch (error) {
+    console.error('Error in /addValuation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+});
+
+// ---------------------------------------------------------------------
+// GET /ensureParcel/:parcelNo
+// Forcing the property fetch if not present
+// ---------------------------------------------------------------------
+app.get('/ensureParcel/:parcelNo', async (req, res) => {
+  try {
+    const { parcelNo } = req.params;
+    // calls http://localhost:5001/fetchParcel
+    const flaskResponse = await axios.post(flaskFetchParcelUrl, { parcel_no: parcelNo }, { timeout: 10000 });
+    res.json(flaskResponse.data);
+  } catch (error) {
+    console.error('Error in /ensureParcel:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------
+// START THE SERVER
+// ---------------------------------------------------------------------
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
