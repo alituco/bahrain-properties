@@ -87,6 +87,8 @@ const ParcelDetails: React.FC = () => {
   const [sewer, setSewer] = useState<string>("connected");
   const [nzpCode, setNzpCode] = useState<string>("RESIDENTIAL");
   const [numOfRoads, setNumOfRoads] = useState<number>(0);
+  const [blockNo, setBlockNo] = useState<number>(0);
+
 
   const [prediction, setPrediction] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +104,7 @@ const ParcelDetails: React.FC = () => {
           throw new Error(`Fetch error: ${response.status}`);
         }
         const data = await response.json();
+        console.log(response); // remove
         setShapeArea(data.shape_area);
         setLatitude(data.latitude);
         setLongitude(data.longitude);
@@ -110,6 +113,7 @@ const ParcelDetails: React.FC = () => {
         setEwaWdd(data.ewa_wdd);
         setSewer(data.sewer);
         setNzpCode(data.nzp_code);
+        setBlockNo(data.block_no);
       } catch (err) {
         console.error("Error fetching parcel data:", err);
       }
@@ -140,6 +144,7 @@ const ParcelDetails: React.FC = () => {
         sewer,
         nzp_code: nzpCode,
         num_of_roads: numOfRoads,
+        block_no: blockNo,
       };
 
       const response = await fetch(`${API_URL}/predict`, {
