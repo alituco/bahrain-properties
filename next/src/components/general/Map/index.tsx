@@ -25,13 +25,20 @@ interface MapComponentProps {
   areaNameFilter?: string;
 }
 
-// A simple interface for storing hovered valuation info
 interface HoverValuation {
   parcelNo: string;
   valuationType?: string;
   valuationAmount?: number;
   valuationDate?: string;
 }
+
+type PropertyFeature = GeoJSON.Feature<GeoJSON.Polygon, {
+  parcel_no?: string;
+  valuation_date?: string;
+  valuation_type?: string;
+  valuation_amount?: number;
+  nzp_code?: string;
+}>;
 
 // Our main React component
 const MapComponent: React.FC<MapComponentProps> = ({
@@ -68,7 +75,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           // Add ID to each feature
           const dataWithIds = {
             ...geojson,
-            features: geojson.features.map((feature: any, index: number) => ({
+            features: geojson.features.map((feature: PropertyFeature, index: number) => ({
               ...feature,
               id: feature.properties?.parcel_no || `prop-${index}`,
             })),
