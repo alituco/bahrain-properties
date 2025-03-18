@@ -34,32 +34,96 @@ const flaskFetchParcelUrl = `${flaskBaseUrl}/fetchParcel`;
 // ---------------------------------------------------------------------
 // GET /coordinates
 // ---------------------------------------------------------------------
+// In your Express app, e.g. server.js or index.js:
+
 app.get('/coordinates', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT
-        parcel_no,
-        ST_AsGeoJSON(ST_Transform(geometry, 4326)) AS geojson
-      FROM properties;
-    `);
+    const { block_no, area_namee } = req.query;
 
+    // Base query for geometry
+    // Using a LEFT JOIN LATERAL subquery to fetch ONE (most recent) valuation row
+    let baseQuery = `
+      SELECT
+        p.parcel_no,
+        ST_AsGeoJSON(ST_Transform(p.geometry, 4326)) AS geojson,
+        v.valuation_date,
+        v.valuation_type,
+        v.valuation_amount
+      FROM properties p
+      LEFT JOIN LATERAL (
+        SELECT *
+        FROM valuations v2
+        WHERE v2.parcel_no = p.parcel_no
+        ORDER BY v2.valuation_date DESC
+        LIMIT 1
+      ) v ON TRUE
+      WHERE 1=1 
+        AND p.nzp_code NOT IN ('PS', 'IS', 'SP', 'UP', 'US', 'FREEZE', 'AGI', 'ARC', 'IST', 'REC', 'S', 'TRN') 
+
+    `;
+    
+    // ps: public sector
+    // is: 
+    // sp: special project
+    // up: under planning
+    // us: under study
+    // agi: Agricultural Investment Areas
+    // arc : Archeological Sites
+    // ist: Infrastructure & Utilities Areas
+    // REC: Recreation Areas
+    // S: services areas
+    // TRN: Transportation Services Area
+
+
+    // bb: mixed use building
+    // RA: Private Residential Areas -A
+    // RB: Private Residential Areas -B
+    // RG: Compounds Garden Housing
+
+
+    const params = [];
+    let paramIndex = 1;
+
+    if (block_no) {
+      baseQuery += ` AND p.block_no = $${paramIndex}`;
+      params.push(block_no);
+      paramIndex++;
+    }
+
+    if (area_namee) {
+      baseQuery += ` AND p.area_namee ILIKE $${paramIndex}`;
+      params.push(`%${area_namee}%`);
+      paramIndex++;
+    }
+
+    baseQuery += `;`;
+
+    const result = await pool.query(baseQuery, params);
+
+    // Build final FeatureCollection
     const geojsonData = {
-      type: 'FeatureCollection',
+      type: "FeatureCollection",
       features: result.rows.map((row) => ({
-        type: 'Feature',
+        type: "Feature",
         geometry: JSON.parse(row.geojson),
         properties: {
-          parcel_no: row.parcel_no
+          parcel_no: row.parcel_no,
+          valuation_date: row.valuation_date,
+          valuation_type: row.valuation_type,
+          valuation_amount: row.valuation_amount,
+          nzp_code: row.nzp_code,
         },
       })),
     };
 
     res.json(geojsonData);
   } catch (error) {
-    console.error('Error fetching coordinates:', error);
-    res.status(500).send('Server error');
+    console.error("Error fetching coordinates:", error);
+    res.status(500).send("Server error");
   }
 });
+
+
 
 // ---------------------------------------------------------------------
 // GET /parcelData/:parcelNo
@@ -78,7 +142,8 @@ app.get('/parcelData/:parcelNo', async (req, res) => {
         nzp_code,
         shape_area,
         longitude,
-        latitude
+        latitude,
+        block_no
       FROM properties
       WHERE parcel_no = $1;
     `, [parcelNo]);
