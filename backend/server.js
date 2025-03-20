@@ -58,7 +58,7 @@ app.get('/coordinates', async (req, res) => {
         LIMIT 1
       ) v ON TRUE
       WHERE 1=1 
-        AND p.nzp_code NOT IN ('PS', 'IS', 'SP', 'UP', 'US', 'FREEZE', 'AGI', 'ARC', 'IST', 'REC', 'S', 'TRN') 
+        AND p.nzp_code NOT IN ('PS', 'IS', 'SP', 'UP', 'US', 'FREEZE', 'AGI', 'ARC', 'IST', 'REC', 'S', 'TRN', 'CSA')
 
     `;
     
@@ -73,8 +73,11 @@ app.get('/coordinates', async (req, res) => {
     // REC: Recreation Areas
     // S: services areas
     // TRN: Transportation Services Area
+    // CSA : Community Service Areas - Admin
 
 
+
+    // some other ones that are NOT blocked:
     // bb: mixed use building
     // RA: Private Residential Areas -A
     // RB: Private Residential Areas -B
