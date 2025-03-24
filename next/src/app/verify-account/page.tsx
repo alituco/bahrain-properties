@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function VerifyAccountPage() {
+function VerifyAccountComponent() {
   const [otp, setOtp] = useState("");
   const [message, setMessage] = useState("");
   const [userId, setUserId] = useState<number | null>(null);
@@ -11,12 +11,10 @@ export default function VerifyAccountPage() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Try to get user_id from query parameters
     const idParam = searchParams.get("user_id");
     if (idParam) {
       setUserId(Number(idParam));
     } else {
-      // If not found in query, try to read from cookies
       const cookies = document.cookie.split(";").reduce((acc: Record<string, string>, cookie) => {
         const [name, value] = cookie.split("=");
         acc[name.trim()] = value;
@@ -49,8 +47,7 @@ export default function VerifyAccountPage() {
       if (data.success) {
         setMessage("OTP verified! Your account is now verified.");
         localStorage.setItem("token", data.token);
-        // Optionally, redirect to a dashboard:
-        // router.push("/dashboard");
+        router.push("/");
       } else {
         setMessage(data.message || "OTP verification failed.");
       }
@@ -73,7 +70,6 @@ export default function VerifyAccountPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          // Note: backend expects { user_id: ... } (not { userId: ... })
           body: JSON.stringify({ user_id: userId }),
         }
       );
@@ -92,9 +88,7 @@ export default function VerifyAccountPage() {
   return (
     <div style={{ margin: "2rem" }}>
       <h1>Verify Your Account</h1>
-      <p>
-        Please check your email for your OTP, then enter it below to verify your account.
-      </p>
+      <p>Please check your email for your OTP, then enter it below to verify your account.</p>
       <form onSubmit={handleVerifyOTP}>
         <div style={{ marginBottom: "1rem" }}>
           <label>OTP: </label>
@@ -112,5 +106,13 @@ export default function VerifyAccountPage() {
       </button>
       {message && <p>{message}</p>}
     </div>
+  );
+}
+
+export default function VerifyAccountPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VerifyAccountComponent />
+    </Suspense>
   );
 }
