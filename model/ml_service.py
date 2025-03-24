@@ -45,7 +45,7 @@ def prepare_inference_data(data_dict):
     if "parcelNo" in df.columns:
         df.drop(columns=["parcelNo"], inplace=True)
 
-    cat_features = ["ewa_edd", "ewa_wdd", "roads", "sewer", "nzp_code"]
+    cat_features = ["ewa_edd", "ewa_wdd", "roads", "sewer", "nzp_code", "block_no"]
     for cat in cat_features:
         if cat not in df.columns:
             df[cat] = None
