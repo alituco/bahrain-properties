@@ -4,14 +4,11 @@ import React, { useRef, useEffect, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import axios from "axios";
 import { Box, styled, Typography } from "@mui/material";
-import { useRouter } from "next/navigation";
+import ValuationHover from "./ValuationHover"; // <— Our new component
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-// Initialize Mapbox access token
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
-// Styled container for the map
 const Container = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -22,209 +19,236 @@ const Container = styled(Box)(({ theme }) => ({
   color: theme.palette.text.primary,
 }));
 
-const MapComponent: React.FC = () => {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null); // Ref to store the map instance
-  const router = useRouter();
+// Props for optional filters
+interface MapComponentProps {
+  blockNoFilter?: string;
+  areaNameFilter?: string;
+}
 
+interface HoverValuation {
+  parcelNo: string;
+  valuationType?: string;
+  valuationAmount?: number;
+  valuationDate?: string;
+}
+
+type PropertyFeature = GeoJSON.Feature<GeoJSON.Polygon, {
+  parcel_no?: string;
+  valuation_date?: string;
+  valuation_type?: string;
+  valuation_amount?: number;
+  nzp_code?: string;
+}>;
+
+// Our main React component
+const MapComponent: React.FC<MapComponentProps> = ({
+  blockNoFilter = "",
+  areaNameFilter = "",
+}) => {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+
+  // Track total properties
   const [totalProperties, setTotalProperties] = useState<number>(-1);
 
+  // State to track hover location + valuation details
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+  const [hoverValuation, setHoverValuation] = useState<HoverValuation | null>(null);
+
   useEffect(() => {
-    // Function to fetch GeoJSON data
+    // 1) FETCH THE GEOJSON
     const fetchGeoJSON = async () => {
       try {
-        const response = await axios.get<GeoJSON.FeatureCollection<GeoJSON.Polygon>>(
-          `${API_URL}/coordinates`, 
-          { timeout: 950000000 }
-        );
-        console.log("Fetched GeoJSON Data:", response.data); // Log the fetched GeoJSON data
-        setTotalProperties(response.data.features.length);
+        const params = new URLSearchParams();
+        if (blockNoFilter) params.append("block_no", blockNoFilter);
+        if (areaNameFilter) params.append("area_namee", areaNameFilter);
 
-        // Add ID to each feature; use `parcel_no` if it exists
-        const dataWithIds = {
-          ...response.data,
-          features: response.data.features.map((feature, index) => ({
-            ...feature,
-            id: feature.properties?.parcel_no || `prop-${index}`, 
-          })),
-        };
+        const response = await axios.get(`${API_URL}/coordinates?${params.toString()}`, {
+          timeout: 950000000,
+        });
+        const geojson = response.data;
+        console.log("Fetched GeoJSON Data:", geojson);
 
-        console.log("GeoJSON Data with IDs:", dataWithIds);
-        return dataWithIds;
+        if (geojson && geojson.features) {
+          setTotalProperties(geojson.features.length);
+
+          // Add ID to each feature
+          const dataWithIds = {
+            ...geojson,
+            features: geojson.features.map((feature: PropertyFeature, index: number) => ({
+              ...feature,
+              id: feature.properties?.parcel_no || `prop-${index}`,
+            })),
+          };
+
+          return dataWithIds;
+        }
+        return null;
       } catch (error) {
         console.error("Error fetching GeoJSON data:", error);
         return null;
       }
     };
 
-    // Initialize the map
+    // 2) INIT OR UPDATE THE MAP
     const initializeMap = async () => {
-      if (mapRef.current) return; // Don’t initialize if already initialized
-
       const geojsonData = await fetchGeoJSON();
-      if (!geojsonData) return;
+      if (!geojsonData) {
+        // If no data, clear or remove map
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+        return;
+      }
 
-      // Create the map
-      const map = new mapboxgl.Map({
-        container: mapContainerRef.current as HTMLElement,
-        style: "mapbox://styles/mapbox/streets-v11", 
-        center: [50.55, 26.22], // Centered on Bahrain
-        zoom: 10, 
-        minZoom: 2,
-      });
-
-      mapRef.current = map;
-
-      map.on("load", () => {
-        console.log("Map loaded");
-
-        // Add GeoJSON source
-        map.addSource("properties", {
-          type: "geojson",
-          data: geojsonData,
+      if (!mapRef.current) {
+        // CREATE A NEW MAP
+        const map = new mapboxgl.Map({
+          container: mapContainerRef.current as HTMLElement,
+          style: "mapbox://styles/mapbox/streets-v11",
+          center: [50.55, 26.22],
+          zoom: 10,
+          minZoom: 2,
         });
 
-        // Fill layer
-        map.addLayer({
-          id: "polygons-layer",
-          type: "fill",
-          source: "properties",
-          paint: {
-            "fill-color": [
-              "case",
-              ["boolean", ["feature-state", "hover"], false],
-              "#FF5733", // Hover color
-              "#888888", // Default fill
-            ],
-            "fill-opacity": 0.7,
-          },
-        });
+        mapRef.current = map;
 
-        // Outline layer
-        map.addLayer({
-          id: "polygons-outline",
-          type: "line",
-          source: "properties",
-          paint: {
-            "line-color": "#333333",
-            "line-width": 2,
-          },
-        });
+        map.on("load", () => {
+          console.log("Map loaded");
 
-        /**
-         * Symbol layer for labeling parcels.
-         * `minzoom` ensures labels only appear at or above this zoom level.
-         */
-        // map.addLayer({
-        //   id: "parcel-labels",
-        //   type: "symbol",
-        //   source: "properties",
-        //   minzoom: 14, // Only show labels when zoom >= 14
-        //   layout: {
-        //     "text-field": ["get", "parcel_no"], // Show parcel_no property
-        //     "text-size": 14,
-        //     "text-variable-anchor": ["center"], 
-        //     "text-allow-overlap": true, 
-        //   },
-        //   paint: {
-        //     "text-color": "#000000", // Black text
-        //   },
-        // });
+          // Add source
+          map.addSource("properties", {
+            type: "geojson",
+            data: geojsonData,
+          });
 
-        let hoveredParcelNo: string | null = null; 
+          // Polygons layer
+          map.addLayer({
+            id: "polygons-layer",
+            type: "fill",
+            source: "properties",
+            paint: {
+              "fill-color": [
+                "case",
+                // If hovered
+                ["boolean", ["feature-state", "hover"], false], "#FF5733",
+                // If valuation_amount is null => gray
+                ["==", ["get", "valuation_amount"], null], "#888888",
+                // Else => red
+                "#FF0000",
+              ],
+              "fill-opacity": 0.7,
+            },
+          });
 
-        // Mouse enter on the polygons
-        map.on("mouseenter", "polygons-layer", (e) => {
-          if (e.features && e.features.length > 0) {
-            const parcelNo = e.features[0].properties?.parcel_no;
-            console.log("Mouse entered parcel:", parcelNo);
+          // Outline
+          map.addLayer({
+            id: "polygons-outline",
+            type: "line",
+            source: "properties",
+            paint: {
+              "line-color": "#333333",
+              "line-width": 2,
+            },
+          });
 
-            if (parcelNo) {
-              // Remove hover from previous if different
-              if (hoveredParcelNo && hoveredParcelNo !== parcelNo) {
-                map.setFeatureState(
-                  { source: "properties", id: hoveredParcelNo },
-                  { hover: false }
-                );
+          // HOVER LOGIC
+          let hoveredParcelNo: string | null = null;
+
+          map.on("mousemove", "polygons-layer", (e) => {
+            if (e.features && e.features.length > 0) {
+              const feature = e.features[0];
+              const parcelNo = feature.properties?.parcel_no;
+              const valuationAmount = feature.properties?.valuation_amount;
+              const valuationType = feature.properties?.valuation_type;
+              const valuationDate = feature.properties?.valuation_date;
+
+              // Show MUI popup if there's a valuation
+              if (valuationAmount) {
+                setHoverPos({ x: e.point.x, y: e.point.y });
+                setHoverValuation({
+                  parcelNo,
+                  valuationType,
+                  valuationAmount,
+                  valuationDate,
+                });
+              } else {
+                // if no valuation, clear the popup
+                setHoverPos(null);
+                setHoverValuation(null);
               }
-              // Set new hover
-              hoveredParcelNo = parcelNo;
-              map.setFeatureState(
-                { source: "properties", id: parcelNo },
-                { hover: true }
-              );
-            }
-            map.getCanvas().style.cursor = "pointer";
-          }
-        });
 
-        // Mouse move over polygons
-        map.on("mousemove", "polygons-layer", (e) => {
-          if (e.features && e.features.length > 0) {
-            const parcelNo = e.features[0].properties?.parcel_no;
-            if (parcelNo) {
-              if (hoveredParcelNo && hoveredParcelNo !== parcelNo) {
-                map.setFeatureState(
-                  { source: "properties", id: hoveredParcelNo },
-                  { hover: false }
-                );
-              }
-              if (hoveredParcelNo !== parcelNo) {
-                map.setFeatureState(
-                  { source: "properties", id: parcelNo },
-                  { hover: true }
-                );
+              // Hover color logic
+              if (parcelNo) {
+                if (hoveredParcelNo && hoveredParcelNo !== parcelNo) {
+                  map.setFeatureState(
+                    { source: "properties", id: hoveredParcelNo },
+                    { hover: false }
+                  );
+                }
                 hoveredParcelNo = parcelNo;
+                map.setFeatureState({ source: "properties", id: parcelNo }, { hover: true });
+              }
+
+              map.getCanvas().style.cursor = "pointer";
+            }
+          });
+
+          map.on("mouseleave", "polygons-layer", () => {
+            if (hoveredParcelNo) {
+              map.setFeatureState(
+                { source: "properties", id: hoveredParcelNo },
+                { hover: false }
+              );
+              hoveredParcelNo = null;
+            }
+            // Hide the popup
+            setHoverPos(null);
+            setHoverValuation(null);
+            map.getCanvas().style.cursor = "";
+          });
+
+          // CLICK LOGIC
+          map.on("click", "polygons-layer", (e) => {
+            if (e.features && e.features.length > 0) {
+              const feature = e.features[0];
+              const parcelNo = feature.properties?.parcel_no;
+              if (parcelNo) {
+                console.log(`Clicked on parcel: ${parcelNo}`);
+                window.open(`/parcel/${parcelNo}`);
               }
             }
-            map.getCanvas().style.cursor = "pointer";
-          }
+          });
         });
-
-        // Mouse leaves polygons
-        map.on("mouseleave", "polygons-layer", () => {
-          if (hoveredParcelNo) {
-            map.setFeatureState(
-              { source: "properties", id: hoveredParcelNo },
-              { hover: false }
-            );
-            hoveredParcelNo = null;
-          }
-          map.getCanvas().style.cursor = "";
-        });
-
-        // Click on polygons
-        map.on("click", "polygons-layer", (e) => {
-          if (e.features && e.features.length > 0) {
-            const feature = e.features[0];
-            const parcelNo = feature.properties?.parcel_no;
-            if (parcelNo) {
-              console.log(`Clicked on parcel: ${parcelNo}`);
-              window.open(`/parcel/${parcelNo}`);
-            } else {
-              console.warn("Parcel number is undefined for the clicked feature.");
-            }
-          }
-        });
-      });
+      } else {
+        // Map already exists, just update the data
+        const map = mapRef.current;
+        const source = map.getSource("properties") as mapboxgl.GeoJSONSource;
+        if (source) {
+          source.setData(geojsonData);
+        }
+      }
     };
 
     initializeMap();
 
-    // Cleanup on unmount
+    // CLEANUP
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
-  }, [router]);
+  }, [blockNoFilter, areaNameFilter]);
 
   return (
     <Container>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h5" gutterBottom>
         Bahrain Properties Map
       </Typography>
+
+      {/* Map container */}
       <Box
         ref={mapContainerRef}
         sx={{
@@ -233,11 +257,25 @@ const MapComponent: React.FC = () => {
           border: "2px solid #ccc",
           borderRadius: "8px",
           boxShadow: 3,
+          position: "relative",
         }}
       />
+
       <Typography variant="body1" mt={2}>
         Total properties: {totalProperties}
       </Typography>
+
+      {/* Render the MUI popup only if we have a hovered valuation */}
+      {hoverPos && hoverValuation && (
+        <ValuationHover
+          x={hoverPos.x}
+          y={hoverPos.y}
+          parcelNo={hoverValuation.parcelNo}
+          valuationType={hoverValuation.valuationType}
+          valuationAmount={hoverValuation.valuationAmount}
+          valuationDate={hoverValuation.valuationDate}
+        />
+      )}
     </Container>
   );
 };
