@@ -16,6 +16,7 @@ const app = express();
 app.use(cors({
   credentials: true,
   origin: [
+    'http://147.182.185.158:3002',
     process.env.ORIGIN1 || 'http://localhost:3000',
     process.env.ORIGIN2 || 'http://localhost:3001',
     process.env.ORIGIN3 || 'http://192.168.100.147:3001',
