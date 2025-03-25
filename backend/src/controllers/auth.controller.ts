@@ -18,7 +18,7 @@ function generateOTP(length = 6): string {
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: Number(process.env.EMAIL_PORT),
-  secure: Number(process.env.EMAIL_PORT) === 465,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -113,7 +113,7 @@ export const verifyOTP: RequestHandler = async (req, res) => {
     );
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       maxAge: 24 * 60 * 60 * 1000,
     });
     res.json({ success: true, message: 'Logged in successfully.', token });
@@ -239,7 +239,7 @@ export const verifyRegisterOTP: RequestHandler = async (req, res) => {
     const token = jwt.sign({ user_id }, config.jwtSecret, { expiresIn: '1d' });
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, //process.env.NODE_ENV === 'production',
       maxAge: 24 * 60 * 60 * 1000,
     });
     res.json({ success: true, message: 'Registration OTP verified, account active.', token });
