@@ -9,6 +9,7 @@ import predictRoutes from './routes/predict.routes';
 import valuationRoutes from './routes/valuation.routes';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import propertyNotesRoutes from './routes/propertyNotes.routes';
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/predict', predictRoutes);
 app.use('/valuation', valuationRoutes);
 app.use('/auth', authRoutes);
 app.use('/user', userRoutes);
+app.use('/property-notes', propertyNotesRoutes);
 
 // Start the Server
 app.listen(Number(config.port), '0.0.0.0', () => {

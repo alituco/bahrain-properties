@@ -15,7 +15,7 @@ export const getProfile: RequestHandler = async (req, res) => {
     }
     const decoded: any = jwt.verify(token, config.jwtSecret);
     const userResult = await pool.query(
-      `SELECT user_id, first_name, last_name, email, real_estate_firm FROM users WHERE user_id = $1`,
+      `SELECT user_id, first_name, last_name, email, real_estate_firm, role FROM users WHERE user_id = $1`,
       [decoded.user_id]
     );
     if (userResult.rows.length === 0) {
