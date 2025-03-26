@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+
 // --- Inline style objects ---
 const containerStyle = {
   padding: "2rem",

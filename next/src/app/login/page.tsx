@@ -2,55 +2,23 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Container,
   Box,
-  Typography,
-  TextField,
-  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { styled } from "@mui/system";
 import { useRouter } from "next/navigation";
 
-// Styled components
-const StyledContainer = styled(Container)(({  }) => ({
-  marginTop: 8,
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-}));
+import {
+  StyledContainer,
+  FormCard,
+  StyledHeading,
+  StyledTextField,
+  StyledButton,
+  ErrorMessage,
+} from '../../styles/LoginAndRegisterForms';
 
-const FormCard = styled(Box)(({  }) => ({
-  padding: 4,
-  boxShadow: '3',
-  borderRadius: '3',
-  backgroundColor: 'white',
-  width: "100%",
-}));
-
-const StyledHeading = styled(Typography)(({  }) => ({
-  fontSize: "2rem",
-  textAlign: "center",
-  fontWeight: 600,
-  marginBottom: 2,
-}));
-
-const StyledTextField = styled(TextField)(({  }) => ({
-  marginBottom: 2,
-}));
-
-const StyledButton = styled(Button)(({  }) => ({
-  marginTop: 2,
-}));
-
-const ErrorMessage = styled(Typography)(({  }) => ({
-  color: 'red',
-  textAlign: "center",
-  marginTop: 1,
-}));
 
 export default function LoginPage() {
   const router = useRouter();

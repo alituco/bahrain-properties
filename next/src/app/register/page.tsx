@@ -1,7 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import {
+  Box,
+} from "@mui/material";
 import { useRouter } from "next/navigation";
+
+
+import {
+  StyledContainer,
+  FormCard,
+  StyledHeading,
+  StyledTextField,
+  StyledButton,
+  ErrorMessage,
+} from '../../styles/LoginAndRegisterForms';
+
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -71,57 +85,58 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ margin: "2rem" }}>
-      <h1>Register</h1>
-      <form onSubmit={handleRegister}>
-        <div style={{ marginBottom: "1rem" }}>
-          <label>First Name: </label>
-          <input
-            type="text"
+    <StyledContainer maxWidth="sm">
+      <FormCard>
+        <StyledHeading>Register</StyledHeading>
+        <Box component="form" onSubmit={handleRegister} noValidate>
+          <StyledTextField
+            label="First Name"
+            variant="outlined"
+            fullWidth
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             required
           />
-        </div>
-        <div style={{ marginBottom: "1rem" }}>
-          <label>Last Name: </label>
-          <input
-            type="text"
+          <StyledTextField
+            label="Last Name"
+            variant="outlined"
+            fullWidth
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             required
           />
-        </div>
-        <div style={{ marginBottom: "1rem" }}>
-          <label>Email: </label>
-          <input
+          <StyledTextField
+            label="Email"
+            variant="outlined"
             type="email"
+            fullWidth
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-        </div>
-        <div style={{ marginBottom: "1rem" }}>
-          <label>Password: </label>
-          <input
+          <StyledTextField
+            label="Password"
+            variant="outlined"
             type="password"
+            fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-        </div>
-        <div style={{ marginBottom: "1rem" }}>
-          <label>Registration Code: </label>
-          <input
-            type="text"
+          <StyledTextField
+            label="Registration Code"
+            variant="outlined"
+            fullWidth
             value={registrationCode}
             onChange={(e) => setRegistrationCode(e.target.value)}
             required
           />
-        </div>
-        <button type="submit">Register</button>
-      </form>
-      {message && <p>{message}</p>}
-    </div>
+          {message && <ErrorMessage variant="body2">{message}</ErrorMessage>}
+          <StyledButton type="submit" variant="contained" fullWidth>
+            Register
+          </StyledButton>
+        </Box>
+      </FormCard>
+    </StyledContainer>
   );
 }
