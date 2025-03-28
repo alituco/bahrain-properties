@@ -4,7 +4,8 @@ import React, { useRef, useEffect, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import axios from "axios";
 import { Box, styled, Typography } from "@mui/material";
-import ValuationHover from "./ValuationHover"; // <— Our new component
+import ValuationHover from "./ValuationHover";
+import FirmPropertyHover from "./FirmPropertyHover";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
@@ -19,11 +20,22 @@ const Container = styled(Box)(({ theme }) => ({
   color: theme.palette.text.primary,
 }));
 
-// Props for optional filters
-interface MapComponentProps {
+export interface MapComponentProps {
   blockNoFilter?: string;
   areaNameFilter?: string;
 }
+
+type PropertyFeature = GeoJSON.Feature<
+  GeoJSON.Polygon,
+  {
+    parcel_no?: string;
+    valuation_date?: string;
+    valuation_type?: string;
+    valuation_amount?: number;
+    firm_saved?: boolean;
+    // Optional: any other property fields (like gov_nm_ar) you may have
+  }
+>;
 
 interface HoverValuation {
   parcelNo: string;
@@ -32,15 +44,12 @@ interface HoverValuation {
   valuationDate?: string;
 }
 
-type PropertyFeature = GeoJSON.Feature<GeoJSON.Polygon, {
-  parcel_no?: string;
-  valuation_date?: string;
-  valuation_type?: string;
-  valuation_amount?: number;
-  nzp_code?: string;
-}>;
+interface HoverFirmProp {
+  // e.g., status, asking_price, etc., if you add those to your GeoJSON
+  status?: string;
+  savedByFirm?: boolean;
+}
 
-// Our main React component
 const MapComponent: React.FC<MapComponentProps> = ({
   blockNoFilter = "",
   areaNameFilter = "",
@@ -48,15 +57,35 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
-  // Track total properties
-  const [totalProperties, setTotalProperties] = useState<number>(-1);
+  const [totalProperties, setTotalProperties] = useState<number>(0);
 
-  // State to track hover location + valuation details
-  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+  // For valuation popups
+  const [hoverValuationPos, setHoverValuationPos] = useState<{ x: number; y: number } | null>(null);
   const [hoverValuation, setHoverValuation] = useState<HoverValuation | null>(null);
 
+  // For firm-property popups
+  const [hoverFirmPos, setHoverFirmPos] = useState<{ x: number; y: number } | null>(null);
+  const [hoverFirmProp, setHoverFirmProp] = useState<HoverFirmProp | null>(null);
+
+  // Clears the map if it exists
+  const removeExistingMap = () => {
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+  };
+
   useEffect(() => {
-    // 1) FETCH THE GEOJSON
+    // If both filters are empty, or you require areaName for sure,
+    // you might skip loading
+    const noFiltersProvided = !blockNoFilter && !areaNameFilter;
+    if (noFiltersProvided) {
+      setTotalProperties(0);
+      removeExistingMap();
+      return;
+    }
+
+    // 1) FETCH the GeoJSON from your /coordinates endpoint
     const fetchGeoJSON = async () => {
       try {
         const params = new URLSearchParams();
@@ -64,7 +93,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
         if (areaNameFilter) params.append("area_namee", areaNameFilter);
 
         const response = await axios.get(`${API_URL}/coordinates?${params.toString()}`, {
-          timeout: 950000000,
+          timeout: 90000,
+          withCredentials: true,
         });
         const geojson = response.data;
         console.log("Fetched GeoJSON Data:", geojson);
@@ -72,7 +102,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         if (geojson && geojson.features) {
           setTotalProperties(geojson.features.length);
 
-          // Add ID to each feature
+          // Add unique ID for the Mapbox feature-state usage
           const dataWithIds = {
             ...geojson,
             features: geojson.features.map((feature: PropertyFeature, index: number) => ({
@@ -80,7 +110,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
               id: feature.properties?.parcel_no || `prop-${index}`,
             })),
           };
-
           return dataWithIds;
         }
         return null;
@@ -90,20 +119,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
       }
     };
 
-    // 2) INIT OR UPDATE THE MAP
+    // 2) INIT or UPDATE the map
     const initializeMap = async () => {
       const geojsonData = await fetchGeoJSON();
       if (!geojsonData) {
-        // If no data, clear or remove map
-        if (mapRef.current) {
-          mapRef.current.remove();
-          mapRef.current = null;
-        }
+        removeExistingMap();
         return;
       }
 
+      // If no map currently, create a new one
       if (!mapRef.current) {
-        // CREATE A NEW MAP
         const map = new mapboxgl.Map({
           container: mapContainerRef.current as HTMLElement,
           style: "mapbox://styles/mapbox/streets-v11",
@@ -111,13 +136,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
           zoom: 10,
           minZoom: 2,
         });
-
         mapRef.current = map;
 
         map.on("load", () => {
-          console.log("Map loaded");
-
-          // Add source
+          // Add our data source
           map.addSource("properties", {
             type: "geojson",
             data: geojsonData,
@@ -131,11 +153,19 @@ const MapComponent: React.FC<MapComponentProps> = ({
             paint: {
               "fill-color": [
                 "case",
-                // If hovered
-                ["boolean", ["feature-state", "hover"], false], "#FF5733",
-                // If valuation_amount is null => gray
-                ["==", ["get", "valuation_amount"], null], "#888888",
-                // Else => red
+                // If hovered => orange
+                ["boolean", ["feature-state", "hover"], false],
+                "#FF5733",
+
+                // If firm_saved => BLUE
+                ["==", ["get", "firm_saved"], true],
+                "#0000FF",
+
+                // If no valuation => gray
+                ["==", ["get", "valuation_amount"], null],
+                "#888888",
+
+                // else => red
                 "#FF0000",
               ],
               "fill-opacity": 0.7,
@@ -153,20 +183,21 @@ const MapComponent: React.FC<MapComponentProps> = ({
             },
           });
 
-          // HOVER LOGIC
           let hoveredParcelNo: string | null = null;
 
+          // MOUSEMOVE
           map.on("mousemove", "polygons-layer", (e) => {
             if (e.features && e.features.length > 0) {
-              const feature = e.features[0];
+              const feature = e.features[0] as mapboxgl.MapboxGeoJSONFeature;
               const parcelNo = feature.properties?.parcel_no;
               const valuationAmount = feature.properties?.valuation_amount;
               const valuationType = feature.properties?.valuation_type;
               const valuationDate = feature.properties?.valuation_date;
+              const firmSaved = feature.properties?.firm_saved; // bool
 
-              // Show MUI popup if there's a valuation
+              // Show ValuationHover
               if (valuationAmount) {
-                setHoverPos({ x: e.point.x, y: e.point.y });
+                setHoverValuationPos({ x: e.point.x, y: e.point.y });
                 setHoverValuation({
                   parcelNo,
                   valuationType,
@@ -174,12 +205,23 @@ const MapComponent: React.FC<MapComponentProps> = ({
                   valuationDate,
                 });
               } else {
-                // if no valuation, clear the popup
-                setHoverPos(null);
+                setHoverValuationPos(null);
                 setHoverValuation(null);
               }
 
-              // Hover color logic
+              // Show FirmPropertyHover if the property is saved
+              if (firmSaved) {
+                setHoverFirmPos({ x: e.point.x, y: e.point.y });
+                setHoverFirmProp({
+                  status: "someStatus??", // you'd have to store status in properties if you want
+                  savedByFirm: true,
+                });
+              } else {
+                setHoverFirmPos(null);
+                setHoverFirmProp(null);
+              }
+
+              // Hover highlight
               if (parcelNo) {
                 if (hoveredParcelNo && hoveredParcelNo !== parcelNo) {
                   map.setFeatureState(
@@ -188,13 +230,17 @@ const MapComponent: React.FC<MapComponentProps> = ({
                   );
                 }
                 hoveredParcelNo = parcelNo;
-                map.setFeatureState({ source: "properties", id: parcelNo }, { hover: true });
+                map.setFeatureState(
+                  { source: "properties", id: parcelNo },
+                  { hover: true }
+                );
               }
 
               map.getCanvas().style.cursor = "pointer";
             }
           });
 
+          // MOUSELEAVE
           map.on("mouseleave", "polygons-layer", () => {
             if (hoveredParcelNo) {
               map.setFeatureState(
@@ -203,26 +249,28 @@ const MapComponent: React.FC<MapComponentProps> = ({
               );
               hoveredParcelNo = null;
             }
-            // Hide the popup
-            setHoverPos(null);
+            setHoverValuationPos(null);
             setHoverValuation(null);
+
+            setHoverFirmPos(null);
+            setHoverFirmProp(null);
+
             map.getCanvas().style.cursor = "";
           });
 
-          // CLICK LOGIC
+          // CLICK
           map.on("click", "polygons-layer", (e) => {
             if (e.features && e.features.length > 0) {
               const feature = e.features[0];
               const parcelNo = feature.properties?.parcel_no;
               if (parcelNo) {
-                console.log(`Clicked on parcel: ${parcelNo}`);
-                window.open(`/parcel/${parcelNo}`);
+                window.open(`/parcel/${parcelNo}`, "_self");
               }
             }
           });
         });
       } else {
-        // Map already exists, just update the data
+        // If map already created, just update data
         const map = mapRef.current;
         const source = map.getSource("properties") as mapboxgl.GeoJSONSource;
         if (source) {
@@ -233,22 +281,23 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
     initializeMap();
 
-    // CLEANUP
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      // optional cleanup
     };
   }, [blockNoFilter, areaNameFilter]);
 
   return (
     <Container>
-      <Typography variant="h5" gutterBottom>
-        Bahrain Properties Map
-      </Typography>
+      <Box display="flex" justifyContent="space-between" width="80vw" mb={2}>
+        <Typography variant="h5" gutterBottom>
+          Bahrain Properties Map
+        </Typography>
+        <Typography variant="subtitle1" sx={{ mr: 2 }}>
+          Total properties: {totalProperties}
+        </Typography>
+      </Box>
 
-      {/* Map container */}
+      {/* MAP CONTAINER */}
       <Box
         ref={mapContainerRef}
         sx={{
@@ -261,19 +310,26 @@ const MapComponent: React.FC<MapComponentProps> = ({
         }}
       />
 
-      <Typography variant="body1" mt={2}>
-        Total properties: {totalProperties}
-      </Typography>
-
-      {/* Render the MUI popup only if we have a hovered valuation */}
-      {hoverPos && hoverValuation && (
+      {/* Valuation Popup */}
+      {hoverValuationPos && hoverValuation && (
         <ValuationHover
-          x={hoverPos.x}
-          y={hoverPos.y}
+          x={hoverValuationPos.x}
+          y={hoverValuationPos.y}
           parcelNo={hoverValuation.parcelNo}
           valuationType={hoverValuation.valuationType}
           valuationAmount={hoverValuation.valuationAmount}
           valuationDate={hoverValuation.valuationDate}
+        />
+      )}
+
+      {/* Firm Saved Popup */}
+      {hoverFirmPos && hoverFirmProp && (
+        <FirmPropertyHover
+          x={hoverFirmPos.x}
+          y={hoverFirmPos.y}
+          status={hoverFirmProp.status}
+          savedByFirm={hoverFirmProp.savedByFirm}
+          parcelNo="parcelNo??"
         />
       )}
     </Container>

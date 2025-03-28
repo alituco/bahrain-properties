@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Container } from "@mui/material";
 import ParcelInfo from "@/components/pages/Property/ParcelInfo";
 import NotesSection from "@/components/pages/Property/NotesSection";
+import FirmPropertyBox from "@/components/pages/Property/FirmPropertyBox";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -12,8 +13,8 @@ interface User {
   user_id: number;
   role: string;
   firm_id: number;
-  first_name?: string; 
-  last_name?: string;  
+  first_name?: string;
+  last_name?: string;
 }
 
 export default function ParcelPage() {
@@ -51,16 +52,14 @@ export default function ParcelPage() {
 
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
-      {/* Parcel Info Section */}
       <ParcelInfo parcelNo={parcelNo} />
-
-      {/* Notes Section, pass user info so newly-added notes have the user name */}
       <NotesSection
         parcelNo={parcelNo}
         isAdmin={isAdmin}
         userFirstName={userFirstName}
         userLastName={userLastName}
       />
+      <FirmPropertyBox parcelNo={parcelNo} />
     </Container>
   );
 }
