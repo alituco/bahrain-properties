@@ -6,6 +6,7 @@ import {
   getFirmPropertyByParcel,
   updateFirmProperty,
   deleteFirmProperty,
+  getFirmPropertiesGeojson
 } from "../controllers/firmProperties.controller";
 
 const firmPropertiesRouter = Router();
@@ -15,6 +16,8 @@ firmPropertiesRouter.post("/", requireAuth, createFirmProperty);
 
 // Get all firm_properties records for the user's firm (optionally filter by ?status=xxx)
 firmPropertiesRouter.get("/", requireAuth, getFirmProperties);
+
+firmPropertiesRouter.get("/geojson", requireAuth, getFirmPropertiesGeojson);
 
 // Get a single firm property record
 firmPropertiesRouter.get("/:parcelNo", requireAuth, getFirmPropertyByParcel);

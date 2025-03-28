@@ -9,10 +9,11 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
+  Tooltip,
 } from "@mui/material";
 
 interface MapFilterProps {
-  onFilterChange: (blockNo: string, areaName: string) => void;
+  onFilterChange: (selectedBlock: string, selectedAreaName: string, selectedGovernorate: string) => void;
 }
 
 const MapFilter: React.FC<MapFilterProps> = ({ onFilterChange }) => {
@@ -20,15 +21,18 @@ const MapFilter: React.FC<MapFilterProps> = ({ onFilterChange }) => {
 
   const [areaNames, setAreaNames] = useState<string[]>([]);
   const [blockNumbers, setBlockNumbers] = useState<string[]>([]);
+  const [governorates, setGovernorates] = useState<string[]>([]);
 
-  // Controlled states for the selected dropdown values
-  const [blockNo, setBlockNo] = useState("");
-  const [areaName, setAreaName] = useState("");
+  const [selectedBlock, setSelectedBlock] = useState("");
+  const [selectedAreaName, setAreaName] = useState("");
+  const [selectedGovernorate, setSelectedGovernorate] = useState("");
 
-  // Called when the user clicks “Filter”
+  // Determines if at least one filter has been selected
+  const isFilterSelected = selectedBlock !== "" || selectedAreaName !== "" || selectedGovernorate !== "";
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onFilterChange(blockNo, areaName);
+    onFilterChange(selectedBlock, selectedAreaName, selectedGovernorate);
   };
 
   useEffect(() => {
@@ -41,8 +45,6 @@ const MapFilter: React.FC<MapFilterProps> = ({ onFilterChange }) => {
         });
         const data = await res.json();
         console.log("Fetched areaNames:", data);
-
-        // If your API returns { "areaNames": [...] }, do:
         if (res.ok && data.areaNames) {
           setAreaNames(data.areaNames);
         }
@@ -58,10 +60,7 @@ const MapFilter: React.FC<MapFilterProps> = ({ onFilterChange }) => {
         });
         const data = await res.json();
         console.log("Fetched blockNumbers:", data);
-
-        // If your API returns { "blockNumbers": [...] }, do:
         if (res.ok && data.blockNumbers) {
-          // Convert them to strings for the dropdown values
           const blocksAsStrings = data.blockNumbers.map((bn: number) => bn.toString());
           setBlockNumbers(blocksAsStrings);
         }
@@ -70,8 +69,24 @@ const MapFilter: React.FC<MapFilterProps> = ({ onFilterChange }) => {
       }
     };
 
+    const fetchGovernorateNames = async () => {
+      try {
+        const res = await fetch(`${API_URL}/propertyFilters/governorates`, {
+          credentials: "include",
+        });
+        const data = await res.json();
+        console.log("Fetched governorateNames:", data);
+        if (res.ok && data.governorates) {
+          setGovernorates(data.governorates);
+        }
+      } catch (err) {
+        console.error("Failed to fetch governorate names:", err);
+      }
+    };
+
     fetchAreaNames();
     fetchBlockNumbers();
+    fetchGovernorateNames();
   }, [API_URL]);
 
   return (
@@ -80,14 +95,13 @@ const MapFilter: React.FC<MapFilterProps> = ({ onFilterChange }) => {
       onSubmit={handleSubmit}
       sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2 }}
     >
-      {/* Block Number Dropdown */}
       <FormControl sx={{ minWidth: 150 }}>
         <InputLabel id="block-number-label">Block Number</InputLabel>
         <Select
           labelId="block-number-label"
           label="Block Number"
-          value={blockNo}
-          onChange={(e: SelectChangeEvent) => setBlockNo(e.target.value as string)}
+          value={selectedBlock}
+          onChange={(e: SelectChangeEvent) => setSelectedBlock(e.target.value as string)}
         >
           <MenuItem value="">
             <em>None</em>
@@ -100,13 +114,12 @@ const MapFilter: React.FC<MapFilterProps> = ({ onFilterChange }) => {
         </Select>
       </FormControl>
 
-      {/* Area Name Dropdown */}
       <FormControl variant="outlined" sx={{ minWidth: 200 }}>
         <InputLabel id="area-name-label">Area Name (English)</InputLabel>
         <Select
           labelId="area-name-label"
           label="Area Name (English)"
-          value={areaName}
+          value={selectedAreaName}
           onChange={(e) => setAreaName(e.target.value as string)}
         >
           <MenuItem value="">
@@ -120,9 +133,32 @@ const MapFilter: React.FC<MapFilterProps> = ({ onFilterChange }) => {
         </Select>
       </FormControl>
 
-      <Button variant="contained" type="submit">
-        Filter
-      </Button>
+      <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+        <InputLabel id="governorate-label">Governorate</InputLabel>
+        <Select
+          labelId="governorate-label"
+          label="Governorate (English)"
+          value={selectedGovernorate}
+          onChange={(e) => setSelectedGovernorate(e.target.value as string)}
+        >
+          <MenuItem value="">
+            <em>None</em>
+          </MenuItem>
+          {governorates.map((gov, index) => (
+            <MenuItem key={index} value={gov}>
+              {gov}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <Tooltip title={!isFilterSelected ? "Please select a filter" : ""} arrow>
+        <span>
+          <Button variant="contained" type="submit" disabled={!isFilterSelected}>
+            Filter
+          </Button>
+        </span>
+      </Tooltip>
     </Box>
   );
 };

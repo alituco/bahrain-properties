@@ -2,7 +2,8 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/requireAuth";
 import {
   getDistinctAreas,
-  getDistinctBlocks
+  getDistinctBlocks,
+  getDistinctGovernorates
 } from "../controllers/propertyFilters.controller";
 
 const router = Router();
@@ -13,5 +14,7 @@ router.get("/areas", requireAuth, getDistinctAreas);
 
 //returns all distinct blocks in properties
 router.get("/blocks", requireAuth, getDistinctBlocks);  
+
+router.get("/governorates", requireAuth, getDistinctGovernorates);
 
 export default router;

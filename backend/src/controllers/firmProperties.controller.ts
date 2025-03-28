@@ -2,6 +2,63 @@ import { RequestHandler } from "express";
 import { pool } from "../config/db";
 import { AuthenticatedRequest } from "../types/AuthenticatedRequest";
 
+// GET /firm-properties/geojson
+// Return a GeoJSON of all properties that the user's firm has saved.
+export const getFirmPropertiesGeojson: RequestHandler = async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) {
+      res.status(401).json({ message: "Unauthorized - No user context." });
+      return;
+    }
+
+    const query = `
+      SELECT 
+        fp.parcel_no,
+        fp.status,
+        fp.asking_price,
+        fp.sold_price,
+        ST_AsGeoJSON(ST_Transform(p.geometry, 4326)) AS geojson,
+        ST_X(ST_Transform(ST_Centroid(p.geometry), 4326)) AS longitude,
+        ST_Y(ST_Transform(ST_Centroid(p.geometry), 4326)) AS latitude
+      FROM firm_properties fp
+      LEFT JOIN properties p ON fp.parcel_no = p.parcel_no
+      WHERE fp.firm_id = $1
+    `;
+
+    const { rows } = await pool.query(query, [user.firm_id]);
+
+    const features = rows.map((row: any) => {
+      return {
+        type: "Feature",
+        geometry: JSON.parse(row.geojson),  // polygon geometry
+        properties: {
+          parcel_no: row.parcel_no,
+          status: row.status,
+          asking_price: row.asking_price,
+          sold_price: row.sold_price,
+          firm_saved: true,
+          // We also include the center lat/long in properties to place markers easily
+          latitude: row.latitude,
+          longitude: row.longitude,
+        },
+      };
+    });
+
+    const geojson = {
+      type: "FeatureCollection",
+      features,
+    };
+
+    res.json(geojson);
+    return;
+  } catch (err) {
+    console.error("Error fetching firm properties as GeoJSON:", err);
+    return next(err);
+  }
+};
+
+
 export const createFirmProperty: RequestHandler = async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).user;

@@ -60,3 +60,31 @@ export const getDistinctBlocks = async (req: Request, res: Response, nex: NextFu
     }
 
 }
+
+export const getDistinctGovernorates = async (req: Request, res: Response, next: NextFunction) => {
+
+  try{
+    const user = (req as AuthenticatedRequest).user;
+    if (!user){
+      res.status(401).json({message: "Unauthorized - No user context."});
+      return;
+    }
+
+    const query = `
+      SELECT DISTINCT min_min_go 
+      FROM properties
+      WHERE min_min_go IS NOT NULL
+      ORDER BY min_min_go;
+    `;
+    const {rows} = await pool.query(query);
+
+    const governorates = rows.map((r) => r.min_min_go);
+
+    res.status(200).json({governorates});
+    return;
+  } catch (error) {
+    console.error("Error fetching distinct governorates:", error);
+    res.status(500).json({ message: "Internal server error" });
+    return;
+  }
+};

@@ -16,7 +16,9 @@ export const getParcelData = async (req: Request, res: Response) => {
         shape_area,
         longitude,
         latitude,
-        block_no
+        block_no,
+        area_namee,
+        ST_AsGeoJSON(geometry) AS geojson
       FROM properties
       WHERE parcel_no = $1;
     `, [parcelNo]);
@@ -31,6 +33,52 @@ export const getParcelData = async (req: Request, res: Response) => {
     res.status(500).send('Server error');
   }
 };
+
+export const getParcelGeoData = async (req: Request, res: Response) => {
+  try {
+    const { parcelNo } = req.params;
+    // Note the use of ST_AsGeoJSON(geometry) to get the full polygon shape
+    const result = await pool.query(
+      `
+      SELECT
+        parcel_no,
+        ST_AsGeoJSON(ST_Transform(geometry, 4326)) AS geojson,
+        ewa_edd,
+        ewa_wdd,
+        roads,
+        sewer,
+        nzp_code,
+        shape_area,
+        longitude,
+        latitude,
+        block_no
+      FROM properties
+      WHERE parcel_no = $1;
+      `,
+      [parcelNo]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Parcel not found" });
+      return;
+    }
+    const row = result.rows[0];
+    // Build a GeoJSON Feature using the polygon geometry
+    const feature = {
+      type: "Feature",
+      geometry: JSON.parse(row.geojson), // Parse the returned GeoJSON string
+      properties: {
+        ...row,
+      },
+    };
+
+    res.json(feature);
+  } catch (error) {
+    console.error("Error fetching parcel geo data:", error);
+    res.status(500).send("Server error");
+  }
+};
+
 
 export const ensureParcel = async (req: Request, res: Response) => {
   try {

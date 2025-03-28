@@ -11,7 +11,7 @@ export const getCoordinates: RequestHandler = async (req, res, next) => {
       return;
     }
 
-    const { block_no, area_namee } = req.query;
+    const { block_no, area_namee, min_min_go } = req.query;
     const firmId = user.firm_id;
 
     let baseQuery = `
@@ -49,6 +49,12 @@ export const getCoordinates: RequestHandler = async (req, res, next) => {
     if (area_namee) {
       baseQuery += ` AND p.area_namee ILIKE $${paramIndex}`;
       params.push(`%${area_namee}%`);
+      paramIndex++;
+    }
+
+    if (min_min_go) {
+      baseQuery += ` AND p.min_min_go ILIKE $${paramIndex}`;
+      params.push(`%${min_min_go}%`);
       paramIndex++;
     }
 

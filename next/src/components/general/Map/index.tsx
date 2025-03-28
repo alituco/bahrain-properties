@@ -23,6 +23,7 @@ const Container = styled(Box)(({ theme }) => ({
 export interface MapComponentProps {
   blockNoFilter?: string;
   areaNameFilter?: string;
+  governorateFilter?: string;
 }
 
 type PropertyFeature = GeoJSON.Feature<
@@ -33,7 +34,6 @@ type PropertyFeature = GeoJSON.Feature<
     valuation_type?: string;
     valuation_amount?: number;
     firm_saved?: boolean;
-    // Optional: any other property fields (like gov_nm_ar) you may have
   }
 >;
 
@@ -53,6 +53,7 @@ interface HoverFirmProp {
 const MapComponent: React.FC<MapComponentProps> = ({
   blockNoFilter = "",
   areaNameFilter = "",
+  governorateFilter = "",
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -76,9 +77,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   };
 
   useEffect(() => {
-    // If both filters are empty, or you require areaName for sure,
-    // you might skip loading
-    const noFiltersProvided = !blockNoFilter && !areaNameFilter;
+    const noFiltersProvided = !blockNoFilter && !areaNameFilter && !governorateFilter;
     if (noFiltersProvided) {
       setTotalProperties(0);
       removeExistingMap();
@@ -91,6 +90,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         const params = new URLSearchParams();
         if (blockNoFilter) params.append("block_no", blockNoFilter);
         if (areaNameFilter) params.append("area_namee", areaNameFilter);
+        if (governorateFilter) params.append("min_min_go", governorateFilter);
 
         const response = await axios.get(`${API_URL}/coordinates?${params.toString()}`, {
           timeout: 90000,
@@ -269,6 +269,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
             }
           });
         });
+
       } else {
         // If map already created, just update data
         const map = mapRef.current;
@@ -284,7 +285,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     return () => {
       // optional cleanup
     };
-  }, [blockNoFilter, areaNameFilter]);
+  }, [blockNoFilter, areaNameFilter, governorateFilter]);
 
   return (
     <Container>

@@ -6,6 +6,7 @@ import { Container } from "@mui/material";
 import ParcelInfo from "@/components/pages/Property/ParcelInfo";
 import NotesSection from "@/components/pages/Property/NotesSection";
 import FirmPropertyBox from "@/components/pages/Property/FirmPropertyBox";
+import ParcelMap from "@/components/pages/Property/ParcelMap";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -60,6 +61,7 @@ export default function ParcelPage() {
         userLastName={userLastName}
       />
       <FirmPropertyBox parcelNo={parcelNo} />
+      <ParcelMap parcelNo={parcelNo} />
     </Container>
   );
 }
