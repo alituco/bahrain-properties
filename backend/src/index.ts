@@ -10,6 +10,8 @@ import valuationRoutes from './routes/valuation.routes';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import propertyNotesRoutes from './routes/propertyNotes.routes';
+import firmPropertiesRouter from './routes/firmProperties.controller';
+import propertyFiltersRoutes from './routes/propertyFilters.routes';
 
 const app = express();
 
@@ -36,6 +38,8 @@ app.use('/valuation', valuationRoutes);
 app.use('/auth', authRoutes);
 app.use('/user', userRoutes);
 app.use('/property-notes', propertyNotesRoutes);
+app.use('/firm-properties', firmPropertiesRouter);
+app.use('/propertyFilters', propertyFiltersRoutes);
 
 // Start the Server
 app.listen(Number(config.port), '0.0.0.0', () => {

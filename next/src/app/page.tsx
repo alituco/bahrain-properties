@@ -38,6 +38,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [blockNo, setBlockNo] = useState("");
   const [areaName, setAreaName] = useState("");
+  const [governorate, setGovernorate] = useState<string>("");
 
   useEffect(() => {
     async function fetchUserProfile() {
@@ -81,9 +82,10 @@ export default function Home() {
     router.push("/login");
   }
 
-  const handleFilterChange = (newBlockNo: string, newAreaName: string) => {
+  const handleFilterChange = (newBlockNo: string, newAreaName: string, newGovernorate: string) => {
     setBlockNo(newBlockNo);
     setAreaName(newAreaName);
+    setGovernorate(newGovernorate);
   };
 
   if (loading) return null; // don't render anything until auth check is complete
@@ -108,7 +110,7 @@ export default function Home() {
       <Box sx={{ marginBottom: "16px" }}>
         <MapFilter onFilterChange={handleFilterChange} />
       </Box>
-      <MapComponent blockNoFilter={blockNo} areaNameFilter={areaName} />
+      <MapComponent blockNoFilter={blockNo} areaNameFilter={areaName} governorateFilter={governorate} />
     </StyledContainer>
   );
 }
