@@ -16,11 +16,7 @@ const Container = styled(Box)(({ theme }) => ({
   minHeight: "100vh",
 }));
 
-interface FirmPropertiesMapProps {
-  // Possibly you have more props, or none if it just always fetches
-}
-
-export default function FirmPropertiesMap({}: FirmPropertiesMapProps) {
+export default function FirmPropertiesMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
@@ -133,7 +129,7 @@ export default function FirmPropertiesMap({}: FirmPropertiesMapProps) {
   return (
     <Container>
       <Typography variant="h5" gutterBottom>
-        My Firm's Saved Properties
+        Firm Properties
       </Typography>
       <Typography variant="body1" sx={{ mb: 2 }}>
         Total saved: {totalProperties}

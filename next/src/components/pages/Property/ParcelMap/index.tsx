@@ -31,7 +31,6 @@ interface ParcelGeoData extends Feature<Geometry, GeoJsonProperties> {
     longitude?: number;
     latitude?: number;
     block_no?: string;
-    [key: string]: any;
   };
 }
 
@@ -79,9 +78,9 @@ const ParcelMap: React.FC<ParcelMapProps> = ({ parcelNo }) => {
     ) {
       center = [parcelGeo.properties.longitude, parcelGeo.properties.latitude];
     } else if (parcelGeo.geometry && parcelGeo.geometry.type === "Polygon") {
-      const coords = (parcelGeo.geometry as any).coordinates;
-      if (coords && coords.length > 0 && coords[0].length > 0) {
-        center = coords[0][0];
+      const coords = parcelGeo.geometry.coordinates as number[][][];
+      if (coords && coords.length > 0 && coords[0].length > 0 && coords[0][0].length >= 2) {
+        center = [coords[0][0][0], coords[0][0][1]];
       }
     }
 
