@@ -1,12 +1,11 @@
 import { RequestHandler } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
+import Mailgun from 'mailgun.js';
+import FormData from 'form-data';
 import { pool } from '../config/db';
 import { config } from '../config/env';
-import dns from 'dns';
-
-dns.setDefaultResultOrder('ipv4first'); 
+ 
 
 
 function generateOTP(length = 6): string {
@@ -18,16 +17,52 @@ function generateOTP(length = 6): string {
   return otp;
 }
 
-// Configure nodemailer transport
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT),
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+const mailgun = new Mailgun(FormData);
+
+if (!process.env.MAILGUN_API_KEY) {
+  throw new Error('MAILGUN_API_KEY environment variable is required');
+}
+
+const mg = mailgun.client({
+  username: 'api',
+  key: process.env.MAILGUN_API_KEY,
+  url: process.env.MAILGUN_API_URL || undefined, 
 });
+
+
+// helper function to send email
+async function sendMail({
+  from,
+  to,
+  subject,
+  text,
+  html,
+  template,
+}: {
+  from: string;
+  to: string | string[];
+  subject: string;
+  text?: string;
+  html?: string;
+  template?: string;
+}) {
+  try {
+    const data = await mg.messages.create(process.env.MAILGUN_DOMAIN as string, {
+      from,
+      to,
+      subject,
+      text,
+      html,
+      template,
+    });
+    console.log('Mail sent:', data);
+    return data;
+  } catch (error) {
+    console.error('Mail sending error:', error);
+    throw error;
+  }
+}
+
 
 // Login Endpoint
 export const login: RequestHandler = async (req, res) => {
@@ -57,8 +92,8 @@ export const login: RequestHandler = async (req, res) => {
        VALUES ($1, $2, $3)`,
       [user.user_id, otp, expiresAt]
     );
-    await transporter.sendMail({
-      from: `"NPS Bahrain" <${process.env.EMAIL_USER}>`,
+    await sendMail({
+      from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
       to: email,
       subject: 'Your Login OTP',
       text: `Your OTP is ${otp}, it expires in 15 minutes.`,
@@ -207,8 +242,8 @@ export const register: RequestHandler = async (req, res) => {
        VALUES ($1, $2, $3)`,
       [newUserId, otp, expiresAt]
     );
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+    await sendMail({
+      from: `NPS Bahrain ${process.env.MAILGUN_FROM}`,
       to: email,
       subject: 'Complete Registration with OTP',
       text: `Your registration OTP is ${otp}, valid for 15 min.`,
@@ -277,8 +312,8 @@ export const resendOTP: RequestHandler = async (req, res) => {
       return;
     }
     const email = userResult.rows[0].email;
-    await transporter.sendMail({
-      from: `"NPS Bahrain" <${process.env.EMAIL_USER}>`,
+    await sendMail({
+      from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
       to: email,
       subject: 'Your New OTP for Verification',
       text: `Your new OTP is ${otp}, valid for 15 minutes.`,
