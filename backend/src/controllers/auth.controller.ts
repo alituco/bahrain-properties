@@ -4,6 +4,10 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { pool } from '../config/db';
 import { config } from '../config/env';
+import dns from 'dns';
+
+dns.setDefaultResultOrder('ipv4first'); 
+
 
 function generateOTP(length = 6): string {
   let otp = '';
