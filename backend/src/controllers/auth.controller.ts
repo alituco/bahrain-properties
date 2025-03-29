@@ -331,6 +331,6 @@ export const resendOTP: RequestHandler = async (req, res) => {
 export const logout: RequestHandler = async (req, res) => {
   res.clearCookie("token");
   res.clearCookie("user_id");
-  res.json({ success: true, message: 'Logged out successfully.' });
+  res.json({ success: true, message: 'Logged out successfully. ' });
   return;
 }
