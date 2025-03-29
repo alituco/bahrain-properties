@@ -32,6 +32,9 @@ const transporter = nodemailer.createTransport({
 // Login Endpoint
 export const login: RequestHandler = async (req, res) => {
   const { email, password } = req.body;
+
+  console.log("LOGGING:", process.env.EMAIL_HOST, process.env.EMAIL_PORT, process.env.EMAIL_USER);
+
   try {
     const userResult = await pool.query(
       'SELECT user_id, email, password FROM users WHERE email = $1 LIMIT 1',
