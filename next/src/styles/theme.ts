@@ -1,39 +1,26 @@
 import { createTheme } from '@mui/material/styles';
 
-declare module '@mui/material/styles' {
-  interface TypeBackground {
-    dark?: string;
-    primary: string;
-  }
-  interface TypeText {
-    heading: string;
-    paragraph: string;
-  }
-}
-
 const theme = createTheme({
-  cssVariables: true,
-  spacing: 8,
   typography: {
-    allVariants: {
-      color: '#FFFFFF',
-      fontFamily: 'Chakra Petch',
-    },
-    button: {
-      textTransform: 'none',
-    },
+    fontFamily: 'var(--font-k2d), sans-serif',
   },
   palette: {
-    text: {
-      primary: '#FFFFFF',
-      secondary: '#000000',
-      heading: '#4F3F3F',
-      paragraph: '#666',
+    primary: {
+      main: '#1C2434', // primary, used for background of containers, etc.
     },
-    background: { primary: '#1E2340', dark: '#000000' },
-    primary: { main: '#30ACA6' },
-    info: { main: '#FFD700' },
+    secondary: {
+      main: '#E6E4E0', // secondary, used for backend containers, etc.
+    },
+    background: {
+      default: '#f8f8f8', // global white background
+      paper: '#f8f8f8',   // paper background
+    },
+    text: { 
+      primary: '#000000', // primary text
+      secondary: '#AAA8A3', // secondary text
+    },
   },
+  // other MUI theme options...
 });
 
 export default theme;
