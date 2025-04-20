@@ -32,7 +32,7 @@ export default function HomePage() {
               setUser(data.user);
               router.push("/dashboard");
             } else {
-              router.push("/login");
+              setLoading(false);
             }
           } catch (error) {
             console.error("Error fetching user profile:", error);

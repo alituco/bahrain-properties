@@ -1,39 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
 import dynamic from "next/dynamic";
-import MapFilter from "../MapFilter";
+import React from "react";
 
-// Dynamically import the map so it doesn't run on the server
 const MapComponent = dynamic(() => import("../MapComponent"), { ssr: false });
 
-export default function MapContainer() {
-  // Filter states
-  const [blockNoFilter, setBlockNoFilter] = useState("");
-  const [areaNameFilter, setAreaNameFilter] = useState("");
-  const [governorateFilter, setGovernorateFilter] = useState("");
+interface MapContainerProps {
+  statusFilter: string;
+}
 
-  function handleFilterChange(
-    selectedBlock: string,
-    selectedArea: string,
-    selectedGov: string
-  ) {
-    setBlockNoFilter(selectedBlock);
-    setAreaNameFilter(selectedArea);
-    setGovernorateFilter(selectedGov);
-  }
-
-  return (
-    <div>
-      {/* Filter at the top */}
-      <MapFilter onFilterChange={handleFilterChange} />
-
-      {/* The actual map, receiving filters as props */}
-      <MapComponent
-        blockNoFilter={blockNoFilter}
-        areaNameFilter={areaNameFilter}
-        governorateFilter={governorateFilter}
-      />
-    </div>
-  );
+/** Thin wrapper that passes the status filter down to the actual map. */
+export default function MapContainer({ statusFilter }: MapContainerProps) {
+  return <MapComponent statusFilter={statusFilter} />;
 }
