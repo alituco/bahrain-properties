@@ -12,13 +12,15 @@ export const getFirmPropertiesGeojson: RequestHandler = async (req, res, next) =
       return;
     }
 
-    const query = `
+    const { status } = req.query; // e.g. "sold", "listed", ...
+
+    let query = `
       SELECT 
         fp.parcel_no,
         fp.status,
         fp.asking_price,
         fp.sold_price,
-        ST_AsGeoJSON(ST_Transform(p.geometry, 4326)) AS geojson,
+        ST_AsGeoJSON(ST_Transform(p.geometry, 4326))  AS geojson,
         ST_X(ST_Transform(ST_Centroid(p.geometry), 4326)) AS longitude,
         ST_Y(ST_Transform(ST_Centroid(p.geometry), 4326)) AS latitude
       FROM firm_properties fp
@@ -26,31 +28,30 @@ export const getFirmPropertiesGeojson: RequestHandler = async (req, res, next) =
       WHERE fp.firm_id = $1
     `;
 
-    const { rows } = await pool.query(query, [user.firm_id]);
+    const params: any[] = [user.firm_id];
 
-    const features = rows.map((row: any) => {
-      return {
-        type: "Feature",
-        geometry: JSON.parse(row.geojson),  // polygon geometry
-        properties: {
-          parcel_no: row.parcel_no,
-          status: row.status,
-          asking_price: row.asking_price,
-          sold_price: row.sold_price,
-          firm_saved: true,
-          // We also include the center lat/long in properties to place markers easily
-          latitude: row.latitude,
-          longitude: row.longitude,
-        },
-      };
-    });
+    if (status && typeof status === "string" && status.toLowerCase() !== "all") {
+      query += ` AND fp.status = $2`;
+      params.push(status);
+    }
 
-    const geojson = {
-      type: "FeatureCollection",
-      features,
-    };
+    const { rows } = await pool.query(query, params);
 
-    res.json(geojson);
+    const features = rows.map((r) => ({
+      type: "Feature",
+      geometry: JSON.parse(r.geojson),
+      properties: {
+        parcel_no:    r.parcel_no,
+        status:       r.status,
+        asking_price: r.asking_price,
+        sold_price:   r.sold_price,
+        firm_saved:   true,
+        latitude:     r.latitude,
+        longitude:    r.longitude,
+      },
+    }));
+
+    res.json({ type: "FeatureCollection", features });
     return;
   } catch (err) {
     console.error("Error fetching firm properties as GeoJSON:", err);
