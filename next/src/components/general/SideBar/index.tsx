@@ -10,7 +10,7 @@ import {
   ListItemText,
   ListItemButton,
 } from '@mui/material';
-import { styled, useTheme } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import HomeIcon from '@mui/icons-material/Home';
 
@@ -57,7 +57,6 @@ const StyledListItemIcon = styled(ListItemIcon)(({ theme }) => ({
 }));
 
 export default function SideBar() {
-  const theme = useTheme();
 
   return (
     <StyledDrawer
