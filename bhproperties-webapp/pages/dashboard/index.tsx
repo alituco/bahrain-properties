@@ -135,7 +135,7 @@ const Sales = () => {
 
                     <Card.Body>
                       {/* pass filter down */}
-                      <MapContainer statusFilter={statusFilter} />
+                      <MapContainer filters={{status: statusFilter}} savedOnly={true} />
                     </Card.Body>
                   </Card>
                 </Col>

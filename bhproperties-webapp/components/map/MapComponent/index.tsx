@@ -1,216 +1,153 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import axios from "axios";
 import { Box, styled } from "@mui/material";
-import ValuationHover from "../ValuationHover";
+import { MapFilters } from "../MapContainer";
 import FirmPropertyHover from "../FirmPropertyHover";
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
-const Container = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  padding: theme.spacing(2),
-  width: "100%",
-}));
+const Wrapper = styled(Box)({ width: "100%", position: "relative" });
 
-interface MapComponentProps {
-  statusFilter: string; // "all" | "sold" | "listed" | ...
+interface Props extends MapFilters {
+  flyTo?:   { lat: number; lon: number } | null;
+  savedOnly?: boolean;
 }
 
-type PropertyFeature = GeoJSON.Feature<
-  GeoJSON.Polygon,
-  {
-    parcel_no: string;
-    status?: string;
-    asking_price?: number;
-    sold_price?: number;
-    firm_saved?: boolean;
-  }
->;
+export default function MapComponent({
+  status,
+  block,
+  area,
+  governorate,
+  minSize,
+  maxSize,
+  flyTo,
+  savedOnly,
+}: Props) {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const mapRef       = useRef<mapboxgl.Map | null>(null);
 
-export default function MapComponent({ statusFilter }: MapComponentProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const [loading,  setLoading]  = useState(true);
+  const [hoverPos, setHoverPos] = useState<{ x:number; y:number } | null>(null);
+  const [hover,    setHover]    = useState<{ status?:string; parcel?:string } | null>(null);
 
-  // tooltip state
-  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(
-    null
-  );
-  const [hoverFeature, setHoverFeature] =
-    useState<PropertyFeature | null>(null);
+  /* -------- build query string (includes sizes) -------- */
+  const qs = () => {
+    const p = new URLSearchParams();
+    if (status && status !== "all") p.append("status", status);
+    if (block)       p.append("block_no",    block);
+    if (area)        p.append("area_namee",  area);
+    if (governorate) p.append("min_min_go",  governorate);
+    if (minSize)     p.append("minSize",     minSize);
+    if (maxSize)     p.append("maxSize",     maxSize);
+    return p.toString();
+  };
 
-  // remove map instance
-  function removeMap() {
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
-    }
-  }
+  /* -------- fetch geojson ------------------------------ */
+  const fetchGeo = async () => {
+    const endpoint = savedOnly ? "firm-properties/geojson" : "coordinates";
+    const { data } = await axios.get(`${API_URL}/${endpoint}?${qs()}`, { withCredentials:true });
+    return {
+      ...data,
+      features: data.features.map((f:any,i:number)=>({ ...f, id:f.properties.parcel_no || i })),
+    };
+  };
 
-  useEffect(() => {
-    async function fetchGeoJSON() {
-      try {
-        const params = new URLSearchParams();
-        if (statusFilter !== "all") {
-          params.append("status", statusFilter);
-        }
+  /* -------- create / update map ------------------------ */
+  const refresh = async () => {
+    setLoading(true);
+    const geo = await fetchGeo();
 
-        const { data } = await axios.get(
-          `${API_URL}/firm-properties/geojson?${params.toString()}`,
-          { withCredentials: true, timeout: 60000 }
-        );
-        if (!data?.features) return null;
+    if (!mapRef.current && mapContainer.current) {
+      mapRef.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style:     "mapbox://styles/mapbox/streets-v11",
+        center:    [50.55, 26.22],
+        zoom:      10,
+      });
 
-        return {
-          ...data,
-          features: data.features.map(
-            (f: PropertyFeature, i: number) => ({
-              ...f,
-              id: f.properties?.parcel_no || `idx-${i}`,
-            })
-          ),
-        };
-      } catch (err) {
-        console.error("Error fetching GeoJSON:", err);
-        return null;
-      }
-    }
+      mapRef.current.on("load", () => {
+        mapRef.current!.addSource("props", { type:"geojson", data:geo });
 
-    async function renderMap() {
-      const geojson = await fetchGeoJSON();
-      if (!geojson) {
-        removeMap();
-        return;
-      }
-
-      // first load
-      if (!mapRef.current) {
-        if (!mapContainerRef.current) {
-          return;
-        }
-
-        const map = new mapboxgl.Map({
-          container: mapContainerRef.current,
-          style: "mapbox://styles/mapbox/streets-v11",
-          attributionControl: false,
-          center: [50.55, 26.22],
-          zoom: 10,
+        mapRef.current!.addLayer({
+          id:"poly",
+          type:"fill",
+          source:"props",
+          paint:{
+            "fill-color":[
+              "case", ["==", ["get","firm_saved"], true], "#0099ff", "#9c27b0"
+            ],
+            "fill-opacity":0.45,
+          },
         });
-        mapRef.current = map;
 
-        map.on("load", () => {
-          map.addSource("properties", {
-            type: "geojson",
-            data: geojson,
-          });
-
-          map.addLayer({
-            id: "polygons",
-            type: "fill",
-            source: "properties",
-            paint: {
-              "fill-color": [
-                "match",
-                ["get", "status"],
-                "sold",
-                "#2ecc71",
-                "listed",
-                "#3498db",
-                "paperwork",
-                "#f39c12",
-                /* default */ "#e74c3c",
-              ],
-              "fill-opacity": 0.65,
-            },
-          });
-
-          map.addLayer({
-            id: "polygons-outline",
-            type: "line",
-            source: "properties",
-            paint: {
-              "line-color": "#2c3e50",
-              "line-width": 1,
-            },
-          });
-
-          // hover
-          map.on("mousemove", "polygons", (e) => {
-            const f = e.features?.[0] as mapboxgl.MapboxGeoJSONFeature | void;
-            if (!f) return;
-            setHoverPos({ x: e.point.x, y: e.point.y });
-            setHoverFeature(f as unknown as PropertyFeature);
-            map.getCanvas().style.cursor = "pointer";
-          });
-
-          map.on("mouseleave", "polygons", () => {
-            setHoverPos(null);
-            setHoverFeature(null);
-            map.getCanvas().style.cursor = "";
-          });
-
-          // click
-          map.on("click", "polygons", (e) => {
-            const f = e.features?.[0];
-            const parcelNo = f?.properties?.parcel_no;
-            if (parcelNo) {
-              window.open(`/parcel/${parcelNo}`, "_self");
-            }
-          });
+        mapRef.current!.addLayer({
+          id:"outline",
+          type:"line",
+          source:"props",
+          paint:{ "line-color":"#673ab7", "line-width":1 },
         });
-      } else {
-        // update existing map source
-        const src = mapRef.current.getSource(
-          "properties"
-        ) as mapboxgl.GeoJSONSource;
-        if (src) {
-          src.setData(geojson);
-        }
-      }
-    }
 
-    renderMap();
-    return () => removeMap();
-  }, [statusFilter]);
+        mapRef.current!.on("click", "poly", e=>{
+          const parcel = e.features?.[0]?.properties?.parcel_no;
+          if (parcel) window.open(`/map/${parcel}`,"_self");
+        });
+
+        mapRef.current!.on("mousemove","poly",e=>{
+          const f = e.features?.[0];
+          const saved = f?.properties?.firm_saved;
+          if (saved) {
+            setHoverPos({ x:e.point.x, y:e.point.y });
+            setHover({ status:f.properties?.status, parcel:f.properties?.parcel_no });
+          } else {
+            setHoverPos(null); setHover(null);
+          }
+          mapRef.current!.getCanvas().style.cursor="pointer";
+        });
+
+        mapRef.current!.on("mouseleave","poly",()=>{
+          setHoverPos(null); setHover(null);
+          mapRef.current!.getCanvas().style.cursor="";
+        });
+
+        setLoading(false);
+      });
+    } else if (mapRef.current) {
+      (mapRef.current.getSource("props") as mapboxgl.GeoJSONSource)?.setData(geo);
+      setLoading(false);
+    }
+  };
+
+  useEffect(()=>{ refresh(); }, [status, block, area, governorate, minSize, maxSize, savedOnly]);
+
+  /* fly‑to */
+  useEffect(()=>{
+    if (flyTo && mapRef.current) {
+      mapRef.current.flyTo({ center:[flyTo.lon, flyTo.lat], zoom:17, essential:true });
+    }
+  }, [flyTo]);
 
   return (
-    <Container>
-      <Box
-        ref={mapContainerRef}
-        sx={{
-          width: "100%",
-          height: "600px",
-          borderRadius: "8px",
-          boxShadow: 3,
-          position: "relative",
-        }}
-      />
-
-      {hoverPos && hoverFeature && (
-        <ValuationHover
-          x={hoverPos.x}
-          y={hoverPos.y}
-          parcelNo={hoverFeature.properties.parcel_no}
-          valuationType={undefined}
-          valuationAmount={hoverFeature.properties?.sold_price}
-          valuationDate={undefined}
-        />
+    <Wrapper ref={mapContainer} sx={{ height:600, borderRadius:8, overflow:"hidden", paddingLeft: 2, paddingRight: 2} }>
+      {loading && (
+        <Box sx={{
+          position:"absolute", inset:0, display:"flex",
+          alignItems:"center", justifyContent:"center",
+          backdropFilter:"blur(2px)", zIndex:5
+        }}>
+          <img src="/assets/images/media/loader.svg" width={48} height={48} alt="Loading…" />
+        </Box>
       )}
 
-      {hoverPos && hoverFeature?.properties?.firm_saved && (
+      {hoverPos && hover && (
         <FirmPropertyHover
-          x={hoverPos.x}
-          y={hoverPos.y}
-          status={hoverFeature.properties.status}
-          savedByFirm={true}
-          parcelNo={hoverFeature.properties.parcel_no}
+          x={hoverPos.x} y={hoverPos.y}
+          savedByFirm status={hover.status} parcelNo={hover.parcel}
         />
       )}
-    </Container>
+    </Wrapper>
   );
 }

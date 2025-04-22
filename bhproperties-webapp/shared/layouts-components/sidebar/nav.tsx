@@ -29,7 +29,7 @@ export const MENUITEMS: any = [
     title: "Properties", icon: PropertyIcon, type: "sub", active: false, children: [
       { path: "/saved-properties", type: "link", active: false, selected: false, title: "My Properties" },
       { path: "/map", type: "link", active: false, selected: false, title: "Property Mappings" },
-      { path: "/saved-properties", type: "link", active: false, selected: false, title: "Property Listings" },
+      { path: "/some-link", type: "link", active: false, selected: false, title: "Property Listings" },
     ]
   },
   {
