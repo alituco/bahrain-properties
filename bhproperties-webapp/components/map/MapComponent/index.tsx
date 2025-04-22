@@ -37,14 +37,14 @@ export default function MapComponent({ statusFilter }: MapComponentProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
-  // tooltip state ------------------------------------------------------------
+  // tooltip state
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(
     null
   );
   const [hoverFeature, setHoverFeature] =
     useState<PropertyFeature | null>(null);
 
-  // --------------------------------------------------------------------------
+  // remove map instance
   function removeMap() {
     if (mapRef.current) {
       mapRef.current.remove();
@@ -53,23 +53,26 @@ export default function MapComponent({ statusFilter }: MapComponentProps) {
   }
 
   useEffect(() => {
-    // ------------------------------------------------------------------------
     async function fetchGeoJSON() {
       try {
         const params = new URLSearchParams();
-        if (statusFilter !== "all") params.append("status", statusFilter);
+        if (statusFilter !== "all") {
+          params.append("status", statusFilter);
+        }
 
         const { data } = await axios.get(
           `${API_URL}/firm-properties/geojson?${params.toString()}`,
           { withCredentials: true, timeout: 60000 }
         );
-
         if (!data?.features) return null;
 
         return {
           ...data,
           features: data.features.map(
-            (f: PropertyFeature, i: number) => ({ ...f, id: f.properties?.parcel_no || i }) // ensure unique id
+            (f: PropertyFeature, i: number) => ({
+              ...f,
+              id: f.properties?.parcel_no || `idx-${i}`,
+            })
           ),
         };
       } catch (err) {
@@ -78,18 +81,21 @@ export default function MapComponent({ statusFilter }: MapComponentProps) {
       }
     }
 
-    // ------------------------------------------------------------------------
-    async function render() {
+    async function renderMap() {
       const geojson = await fetchGeoJSON();
       if (!geojson) {
         removeMap();
         return;
       }
 
-      // first load -----------------------------------------------------------
+      // first load
       if (!mapRef.current) {
+        if (!mapContainerRef.current) {
+          return;
+        }
+
         const map = new mapboxgl.Map({
-          container: mapContainerRef.current as HTMLElement,
+          container: mapContainerRef.current,
           style: "mapbox://styles/mapbox/streets-v11",
           attributionControl: false,
           center: [50.55, 26.22],
@@ -98,9 +104,11 @@ export default function MapComponent({ statusFilter }: MapComponentProps) {
         mapRef.current = map;
 
         map.on("load", () => {
-          map.addSource("properties", { type: "geojson", data: geojson });
+          map.addSource("properties", {
+            type: "geojson",
+            data: geojson,
+          });
 
-          // coloured polygons by status
           map.addLayer({
             id: "polygons",
             type: "fill",
@@ -131,7 +139,7 @@ export default function MapComponent({ statusFilter }: MapComponentProps) {
             },
           });
 
-          // hover ------------------------------------------------------------
+          // hover
           map.on("mousemove", "polygons", (e) => {
             const f = e.features?.[0] as mapboxgl.MapboxGeoJSONFeature | void;
             if (!f) return;
@@ -146,25 +154,30 @@ export default function MapComponent({ statusFilter }: MapComponentProps) {
             map.getCanvas().style.cursor = "";
           });
 
-          // click -----------------------------------------------------------
+          // click
           map.on("click", "polygons", (e) => {
             const f = e.features?.[0];
             const parcelNo = f?.properties?.parcel_no;
-            if (parcelNo) window.open(`/parcel/${parcelNo}`, "_self");
+            if (parcelNo) {
+              window.open(`/parcel/${parcelNo}`, "_self");
+            }
           });
         });
       } else {
-        // map already created – just swap data
-        const src = mapRef.current.getSource("properties") as mapboxgl.GeoJSONSource;
-        if (src) src.setData(geojson);
+        // update existing map source
+        const src = mapRef.current.getSource(
+          "properties"
+        ) as mapboxgl.GeoJSONSource;
+        if (src) {
+          src.setData(geojson);
+        }
       }
     }
 
-    render();
-    return () => removeMap(); // clean up on unmount
+    renderMap();
+    return () => removeMap();
   }, [statusFilter]);
 
-  // --------------------------------------------------------------------------
   return (
     <Container>
       <Box
@@ -172,14 +185,12 @@ export default function MapComponent({ statusFilter }: MapComponentProps) {
         sx={{
           width: "100%",
           height: "600px",
-          border: "2px solid #ccc",
           borderRadius: "8px",
           boxShadow: 3,
           position: "relative",
         }}
       />
 
-      {/* simple hover tooltip (adjust as needed) */}
       {hoverPos && hoverFeature && (
         <ValuationHover
           x={hoverPos.x}
@@ -188,6 +199,16 @@ export default function MapComponent({ statusFilter }: MapComponentProps) {
           valuationType={undefined}
           valuationAmount={hoverFeature.properties?.sold_price}
           valuationDate={undefined}
+        />
+      )}
+
+      {hoverPos && hoverFeature?.properties?.firm_saved && (
+        <FirmPropertyHover
+          x={hoverPos.x}
+          y={hoverPos.y}
+          status={hoverFeature.properties.status}
+          savedByFirm={true}
+          parcelNo={hoverFeature.properties.parcel_no}
         />
       )}
     </Container>

@@ -10,7 +10,7 @@ import Spkcardscomponent from "@/shared/@spk-reusable-components/reusable-dashbo
 import SpkDropdown from "@/shared/@spk-reusable-components/reusable-uielements/spk-dropdown";
 import SpkBreadcrumb from "@/shared/@spk-reusable-components/reusable-uielements/spk-breadcrumb";
 import Seo from "@/shared/layouts-components/seo/seo";
-import { Cardsdata, Recentorders } from "@/shared/data/dashboard/salesdata";
+import { Cardsdata} from "@/shared/data/dashboard/salesdata";
 
 // map wrapper (client‑side only)
 const MapContainer = dynamic(() => import("@/components/map/MapContainer"), {
@@ -60,11 +60,6 @@ const Sales = () => {
 
     return () => { cancelled = true };
   }, []);
-
-  // demo data for other dashboard cards
-  const [data, setData] = useState(Recentorders);
-  const handleRemove = (id: number) =>
-    setData((d) => d.filter((item) => item.id !== id));
 
   // --------------------------------------------------------------------------
   return (
