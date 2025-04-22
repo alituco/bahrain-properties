@@ -177,3 +177,20 @@
     .shepherd-element{
         padding: 0;
     }
+
+
+// MAPBOX CSS
+// This is a workaround to fix the mapbox map not being responsive
+    .mapboxgl-canvas {
+        width: 100%!important;
+        height: 100%!important;
+        border-radius: 12px;          
+      }
+      
+      #dashboard-map-box {            
+        overflow: hidden;
+      }
+      
+      .custom-card .mapbox-container {
+        overflow: hidden;
+      }

@@ -126,10 +126,15 @@ export const getFirmProperties: RequestHandler = async (req, res, next) => {
       return;
     }
 
-    const { status } = req.query;
+    const {
+      status,
+      block_no,
+      area_namee,
+      minPrice,
+      maxPrice,
+    } = req.query as Record<string, string>;
 
-    // Basic query to select from firm_properties for the user's firm.
-    let baseQuery = `
+    let sql = `
       SELECT fp.id,
              fp.firm_id,
              fp.parcel_no,
@@ -146,24 +151,43 @@ export const getFirmProperties: RequestHandler = async (req, res, next) => {
    LEFT JOIN properties p ON fp.parcel_no = p.parcel_no
        WHERE fp.firm_id = $1
     `;
-
     const params: any[] = [user.firm_id];
 
     if (status) {
       params.push(status);
-      baseQuery += ` AND fp.status = $${params.length}`;
+      sql += ` AND fp.status = $${params.length}`;
     }
 
-    baseQuery += " ORDER BY fp.created_at DESC";
+    if (block_no) {
+      params.push(block_no);
+      sql += ` AND p.block_no = $${params.length}`;
+    }
 
-    const { rows } = await pool.query(baseQuery, params);
+    if (area_namee) {
+      params.push(area_namee);
+      sql += ` AND p.area_namee = $${params.length}`;
+    }
+
+    if (minPrice) {
+      params.push(Number(minPrice));
+      sql += ` AND fp.asking_price >= $${params.length}`;
+    }
+
+    if (maxPrice) {
+      params.push(Number(maxPrice));
+      sql += ` AND fp.asking_price <= $${params.length}`;
+    }
+
+    sql += " ORDER BY fp.created_at DESC";
+
+    const { rows } = await pool.query(sql, params);
     res.status(200).json({ firmProperties: rows });
-    return;
   } catch (error) {
     console.error("Error fetching firm properties:", error);
     next(error);
   }
 };
+
 
 
 /**

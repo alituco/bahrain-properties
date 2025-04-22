@@ -2,7 +2,7 @@ import React from "react";
 import Head from "next/head";
 import favicon from "../../../public/favicon.ico";
 const Seo = ({ title }:any) => {
-	let i = `Xintra - ${title}`;
+	let i = `PMS - ${title}`;
 	return (
 		<Head>
 			<title>{i}</title>
