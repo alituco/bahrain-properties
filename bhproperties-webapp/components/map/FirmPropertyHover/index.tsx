@@ -32,17 +32,8 @@ export default function FirmPropertyHover({
       }}
     >
       <Paper sx={{ p: 1 }}>
-        <Typography variant="subtitle1">Parcel: {parcelNo}</Typography>
         {status && <Typography variant="subtitle1"> Status: {status}</Typography>}
-        {savedByFirm ? (
-          <Typography variant="body2" color="success.main">
-            Your firm has saved this property!
-          </Typography>
-        ) : (
-          <Typography variant="subtitle1" color="error.main">
-            Not saved by your firm
-          </Typography>
-        )}
+        
       </Paper>
     </Box>
   );

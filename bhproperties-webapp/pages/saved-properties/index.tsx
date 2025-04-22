@@ -1,8 +1,9 @@
-/* pages/firm-properties.tsx */
+// pages/firm-properties.tsx
 "use client";
 
-import React, { Fragment, useEffect, useState } from "react";
+import React, { Fragment, useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import {
   Card,
@@ -12,13 +13,19 @@ import {
   Spinner,
   Button as BsButton,
 } from "react-bootstrap";
+import Image from "next/image";
 import Swal from "sweetalert2";
 import Seo from "@/shared/layouts-components/seo/seo";
 import SpkBreadcrumb from "@/shared/@spk-reusable-components/reusable-uielements/spk-breadcrumb";
+import SpkPopovers from "@/shared/@spk-reusable-components/reusable-uielements/spk-popovers";
 import SpkTablescomponent from "@/shared/@spk-reusable-components/reusable-tables/tables-component";
 import SpkButton from "@/shared/@spk-reusable-components/reusable-uielements/spk-button";
 import SpkAlert from "@/shared/@spk-reusable-components/reusable-uielements/spk-alert";
 import FirmPropertyFilter from "@/components/FirmPropertyFilter";
+
+const MapContainer = dynamic(() => import("@/components/map/MapContainer"), {
+  ssr: false,
+});
 
 interface FirmProperty {
   id: number;
@@ -28,13 +35,15 @@ interface FirmProperty {
   status: string;
   asking_price: number | null;
   updated_at: string;
+  longitude: number;
+  latitude: number;
 }
 
 interface UserProfile {
   role: string;
 }
 
-const FirmPropertiesPage = () => {
+export default function FirmPropertiesPage() {
   const router = useRouter();
   const API = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -49,7 +58,31 @@ const FirmPropertiesPage = () => {
   const [areas, setAreas] = useState<string[]>([]);
   const [showFilter, setShowFilter] = useState(false);
 
+  const [flyTo, setFlyTo] = useState<{ lat: number; lon: number } | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
+
+  const mapSectionRef = useRef<HTMLDivElement>(null);
+  const statusFilter = filters.status ?? "all";
+
+  // helper for a custom smooth scroll over `duration` ms,
+  // landing `offsetPx` above the element top
+  function smoothScrollTo(el: HTMLElement, duration = 800, offsetPx = 100) {
+    const startY = window.scrollY;
+    const targetY =
+      el.getBoundingClientRect().top + startY - offsetPx;
+    const distance = targetY - startY;
+    let startTime: number | null = null;
+    function step(timestamp: number) {
+      if (startTime === null) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      window.scrollTo(0, startY + distance * progress);
+      if (elapsed < duration) {
+        window.requestAnimationFrame(step);
+      }
+    }
+    window.requestAnimationFrame(step);
+  }
 
   useEffect(() => {
     (async () => {
@@ -62,7 +95,7 @@ const FirmPropertiesPage = () => {
         router.replace("/");
       }
     })();
-  }, []);
+  }, [API, router]);
 
   const loadAreas = async () => {
     const res = await fetch(`${API}/propertyFilters/areas`, {
@@ -97,7 +130,7 @@ const FirmPropertiesPage = () => {
   useEffect(() => {
     loadAreas();
     loadRows();
-  }, []);
+  }, [API]);
 
   const askDelete = (row: FirmProperty) => {
     if (!isAdmin) {
@@ -110,7 +143,7 @@ const FirmPropertiesPage = () => {
       return;
     }
     Swal.fire({
-      title: `Delete ${row.parcel_no}?`,
+      title: `Are you sure you want to delete this property?`,
       text: "This action cannot be undone.",
       icon: "warning",
       showCancelButton: true,
@@ -150,10 +183,22 @@ const FirmPropertiesPage = () => {
     loadRows({});
   };
 
+  useEffect(() => {
+    if (flyTo && mapSectionRef.current) {
+      smoothScrollTo(mapSectionRef.current, 1000, 120);
+    }
+  }, [flyTo]);
+
   if (loading) {
     return (
-      <div className="d-flex justify-content-center py-5">
-        <Spinner animation="border" />
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <Image
+          src="/assets/images/media/loader.svg"
+          width={64}
+          height={64}
+          alt="Loading..."
+          priority
+        />
       </div>
     );
   }
@@ -163,30 +208,29 @@ const FirmPropertiesPage = () => {
       <Seo title="Firm Properties" />
 
       <div className="d-flex align-items-center justify-content-between page-header-breadcrumb flex-wrap gap-2">
-            <div>
-              <SpkBreadcrumb Customclass="mb-1">
-                <li className="breadcrumb-item">
-                  <Link href="#!">Dashboards</Link>
-                </li>
-                <li className="breadcrumb-item active" aria-current="page">
-                  General
-                </li>
-              </SpkBreadcrumb>
-              <h1 className="page-title fw-medium fs-18 mb-0">Dashboard</h1>
-            </div>
-            <Col className="text-end">
-                <BsButton variant='primary' onClick={() => setShowFilter(true)}>
-                <i className="ri-filter-3-line align-middle me-1 lh-1"></i> Filter
-                </BsButton>
-            </Col>
+        <div>
+          <SpkBreadcrumb Customclass="mb-1">
+            <li className="breadcrumb-item">
+              <Link href="#!">Dashboards</Link>
+            </li>
+            <li className="breadcrumb-item active">Firm Properties</li>
+          </SpkBreadcrumb>
+          <h1 className="page-title fw-medium fs-18 mb-0">Firm Properties</h1>
         </div>
+        <Col className="text-end">
+          <BsButton variant="primary" onClick={() => setShowFilter(true)}>
+            <i className="ri-filter-3-line me-1" />
+            Filter
+          </BsButton>
+        </Col>
+      </div>
 
       {fetchError && (
         <SpkAlert
           variant="danger"
           CustomClass="mb-3"
-          dismissible={true}
-          show={true}
+          dismissible
+          show
           onClose={() => setFetchError(null)}
         >
           {fetchError}
@@ -196,8 +240,8 @@ const FirmPropertiesPage = () => {
         <SpkAlert
           variant={toast.variant}
           CustomClass="mb-3"
-          dismissible={true}
-          show={true}
+          dismissible
+          show
           onClose={() => setToast(null)}
         >
           {toast.text}
@@ -227,7 +271,7 @@ const FirmPropertiesPage = () => {
         <Col xl={12}>
           <Card className="custom-card">
             <Card.Header>
-              <div className="card-title">Firm Properties</div>
+              <div className="card-title">List</div>
             </Card.Header>
             <Card.Body>
               <div className="table-responsive">
@@ -235,7 +279,6 @@ const FirmPropertiesPage = () => {
                   tableClass="text-nowrap table-bordered"
                   showCheckbox={false}
                   header={[
-                    { title: "Parcel No" },
                     { title: "Area" },
                     { title: "Block" },
                     { title: "Status" },
@@ -246,7 +289,6 @@ const FirmPropertiesPage = () => {
                 >
                   {rows.map((row) => (
                     <tr key={row.id}>
-                      <td>{row.parcel_no}</td>
                       <td>{row.area_namee}</td>
                       <td>{row.block_no}</td>
                       <td>
@@ -256,35 +298,49 @@ const FirmPropertiesPage = () => {
                       </td>
                       <td>
                         {row.asking_price != null
-                          ? `${row.asking_price.toLocaleString()} BHD`
+                          ? `${row.asking_price.toLocaleString()} BHD`
                           : "--"}
                       </td>
-                      <td>{new Date(row.updated_at).toLocaleDateString()}</td>
+                      <td>
+                        {new Date(row.updated_at).toLocaleDateString()}
+                      </td>
                       <td>
                         <div className="hstack gap-2 fs-15">
-                          <Link
-                            href={`/parcel/${row.parcel_no}`}
-                            className="btn btn-icon btn-sm btn-primary-light"
-                          >
-                            <i className="ri-eye-line" />
-                          </Link>
                           <SpkButton
                             Size="sm"
-                            Buttonvariant={
-                              isAdmin ? "danger" : "secondary-light"
+                            Buttonvariant="primary-light"
+                            onClickfunc={() =>
+                              setFlyTo({ lat: row.latitude, lon: row.longitude })
                             }
-                            Disabled={busyId === row.id || !isAdmin}
-                            onClickfunc={() => askDelete(row)}
                           >
-                            {busyId === row.id ? (
-                              <Spinner
-                                animation="border"
-                                size="sm"
-                                className="me-1"
-                              />
-                            ) : null}
-                            <i className="ri-delete-bin-line" />
+                            <i className="ri-focus-3-line" />
                           </SpkButton>
+                          <SpkPopovers
+                            content="You don’t have privileges for this"
+                            trigger="hover"
+                            placement="top"
+                            rootClose
+                          >
+                            <span className="d-inline-block">
+                              <SpkButton
+                                Size="sm"
+                                Buttonvariant={
+                                  isAdmin ? "danger" : "secondary-light"
+                                }
+                                Disabled={busyId === row.id || !isAdmin}
+                                onClickfunc={() => askDelete(row)}
+                              >
+                                {busyId === row.id && (
+                                  <Spinner
+                                    animation="border"
+                                    size="sm"
+                                    className="me-1"
+                                  />
+                                )}
+                                <i className="ri-delete-bin-line" />
+                              </SpkButton>
+                            </span>
+                          </SpkPopovers>
                         </div>
                       </td>
                     </tr>
@@ -295,9 +351,27 @@ const FirmPropertiesPage = () => {
           </Card>
         </Col>
       </Row>
+
+      <div ref={mapSectionRef}>
+        <Row className="mt-4">
+          <Col xl={12}>
+            <Card className="custom-card">
+              <Card.Header>
+                <div className="card-title">Map</div>
+              </Card.Header>
+              <Card.Body>
+                <MapContainer
+                  filters={{ status: statusFilter }}
+                  flyTo={flyTo}
+                  savedOnly={true}
+                />
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </div>
     </Fragment>
   );
-};
+}
 
 FirmPropertiesPage.layout = "ContentLayout";
-export default FirmPropertiesPage;

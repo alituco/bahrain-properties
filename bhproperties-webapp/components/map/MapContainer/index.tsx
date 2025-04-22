@@ -5,11 +5,21 @@ import React from "react";
 
 const MapComponent = dynamic(() => import("../MapComponent"), { ssr: false });
 
-interface MapContainerProps {
-  statusFilter: string;
+export interface MapFilters {
+  status?: string;
+  block?: string;
+  area?: string;
+  governorate?: string;
+  minSize?:     string;
+  maxSize?:     string;
 }
 
-/** Thin wrapper that passes the status filter down to the actual map. */
-export default function MapContainer({ statusFilter }: MapContainerProps) {
-  return <MapComponent statusFilter={statusFilter} />;
+interface Props {
+  filters: MapFilters;
+  flyTo?: { lat: number; lon: number } | null;
+  savedOnly?: boolean;
+}
+
+export default function MapContainer({ filters, flyTo, savedOnly = false }: Props) {
+  return <MapComponent {...filters} flyTo={flyTo} savedOnly={savedOnly} />;
 }
