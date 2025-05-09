@@ -597,7 +597,7 @@ const Header = ({ local_varaiable, ThemeChanger }: any) => {
               </Dropdown.Item>
               <li><Link className="dropdown-item d-flex align-items-center" href="/components/pages/profile"><i className="fe fe-user p-1 rounded-circle bg-primary-transparent me-2 fs-16"></i>Profile</Link></li>
               <li><Link className="dropdown-item d-flex align-items-center" href="/components/pages/email/mail-settings"><i className="fe fe-settings p-1 rounded-circle bg-primary-transparent ings me-2 fs-16"></i>Settings</Link></li>
-              <li><Link className="dropdown-item d-flex align-items-center" href="/components/authentication/sign-in/cover" onClick={handleLogOut}><i className="fe fe-lock p-1 rounded-circle bg-primary-transparent ut me-2 fs-16"></i>Log Out</Link></li>
+              <li><Dropdown.Item className="dropdown-item d-flex align-items-center" onClick={handleLogOut}><i className="fe fe-lock p-1 rounded-circle bg-primary-transparent ut me-2 fs-16"></i>Log Out</Dropdown.Item></li>
             </SpkDropdown>
 
             <li className="header-element" >
