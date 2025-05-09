@@ -93,7 +93,7 @@ export default function MapComponent({
 
         mapRef.current!.on("click", "poly", e=>{
           const parcel = e.features?.[0]?.properties?.parcel_no;
-          if (parcel) window.open(`/map/${parcel}`,"_self");
+          if (parcel) window.open(`/property/${parcel}`,"_self");
         });
 
         mapRef.current!.on("mousemove","poly",e=>{
@@ -131,7 +131,7 @@ export default function MapComponent({
   }, [flyTo]);
 
   return (
-    <Wrapper ref={mapContainer} sx={{ height:600, borderRadius:8, overflow:"hidden", paddingLeft: 2, paddingRight: 2} }>
+    <Wrapper ref={mapContainer} sx={{ borderRadius:8, overflow:"hidden", paddingLeft: 2, paddingRight: 2} }>
       {loading && (
         <Box sx={{
           position:"absolute", inset:0, display:"flex",

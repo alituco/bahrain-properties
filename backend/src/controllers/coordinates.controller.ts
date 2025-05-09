@@ -63,8 +63,7 @@ export const getCoordinates: RequestHandler = async (
       LEFT JOIN firm_properties fp
              ON fp.parcel_no = p.parcel_no
             AND fp.firm_id   = $1
-      WHERE p.nzp_code NOT IN ('PS','IS','SP','UP','US','FREEZE',
-                               'AGI','ARC','IST','REC','S','TRN','CSA')
+      WHERE TRUE
     `;
 
     if (block_no) {

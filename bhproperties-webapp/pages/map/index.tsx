@@ -11,7 +11,6 @@ import SpkBreadcrumb from "@/shared/@spk-reusable-components/reusable-uielements
 import MapFilter, { MapFilters } from "@/components/map/MapFilter";
 import SpkAlert from "@/shared/@spk-reusable-components/reusable-uielements/spk-alert";
 
-/* map only rendered client‑side ---------------------------------------- */
 const MapContainer = dynamic(() => import("@/components/map/MapContainer"), {
   ssr: false,
 });
@@ -24,9 +23,8 @@ const PublicMapPage = () => {
   const [showFilter, setShowFilter] = useState<boolean>(true);
   const [flyTo, setFlyTo] = useState<{ lat: number; lon: number } | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);     // ← avoids hydration mismatch
+  const [mounted, setMounted] = useState(false);    
 
-  /* fetch dropdown options once --------------------------------------- */
   useEffect(() => {
     (async () => {
       try {
@@ -40,10 +38,9 @@ const PublicMapPage = () => {
     })();
   }, [API]);
 
-  /* mark mounted to silence hydration mismatch ------------------------ */
   useEffect(() => { setMounted(true); }, []);
 
-  if (!mounted) return null;              // server ≠ client → wait
+  if (!mounted) return null;              
 
   if (err) {
     return (
@@ -53,14 +50,12 @@ const PublicMapPage = () => {
     );
   }
 
-  /* at least one filter other than size? ------------------------------ */
   const hasPrimary = filters.block || filters.area || filters.governorate;
 
   return (
     <>
       <Seo title="All Properties Map" />
 
-      {/* breadcrumb / header ------------------------------------------- */}
       <div className="d-flex align-items-center justify-content-between page-header-breadcrumb flex-wrap gap-2">
         <div>
           <SpkBreadcrumb Customclass="mb-1">
@@ -77,7 +72,6 @@ const PublicMapPage = () => {
         </Col>
       </div>
 
-      {/* filter modal --------------------------------------------------- */}
       <Modal
         show={showFilter}
         onHide={() => setShowFilter(false)}
@@ -98,7 +92,7 @@ const PublicMapPage = () => {
             <MapFilter
               areas={areas}
               governorates={govs}
-              values={filters}               /* ← keep current selections */
+              values={filters}               
               onApply={(f) => { setFilters(f); setShowFilter(false); }}
               onClear={()  => { setFilters({}); setShowFilter(false); }}
             />
@@ -106,7 +100,6 @@ const PublicMapPage = () => {
         </Modal.Body>
       </Modal>
 
-      {/* map or placeholder -------------------------------------------- */}
       {hasPrimary ? (
         <Row>
           <Col xl={12}>

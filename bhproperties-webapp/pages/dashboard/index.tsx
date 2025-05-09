@@ -12,7 +12,6 @@ import SpkBreadcrumb from "@/shared/@spk-reusable-components/reusable-uielements
 import Seo from "@/shared/layouts-components/seo/seo";
 import { Cardsdata} from "@/shared/data/dashboard/salesdata";
 
-// map wrapper (client‑side only)
 const MapContainer = dynamic(() => import("@/components/map/MapContainer"), {
   ssr: false,
 });
@@ -26,7 +25,6 @@ interface User {
   real_estate_firm: string;
 }
 
-// adjust this list if you add more statuses in the DB
 const STATUSES = ["listed", "sold", "paperwork", "under_contract"];
 
 const Sales = () => {
@@ -34,12 +32,10 @@ const Sales = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
-  // map status filter
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // auth check ---------------------------------------------------------------
   useEffect(() => {
-    let cancelled = false;              // guard in case component unmounts
+    let cancelled = false;              
 
     (async () => {
       try {
@@ -52,23 +48,21 @@ const Sales = () => {
         const { user } = await res.json();
         if (!cancelled) setUser(user);
       } catch (e) {
-        if (!cancelled) router.replace("/");   // go home once
+        if (!cancelled) router.replace("/");   
       } finally {
-        if (!cancelled) setLoading(false);     // show UI regardless
+        if (!cancelled) setLoading(false);     
       }
     })();
 
     return () => { cancelled = true };
   }, []);
 
-  // --------------------------------------------------------------------------
   return (
     <Fragment>
       {!loading && (
         <Fragment>
           <Seo title="Dashboard" />
 
-          {/* breadcrumb ------------------------------------------------------- */}
           <div className="d-flex align-items-center justify-content-between page-header-breadcrumb flex-wrap gap-2">
             <div>
               <SpkBreadcrumb Customclass="mb-1">
@@ -83,11 +77,9 @@ const Sales = () => {
             </div>
           </div>
 
-          {/* main grid -------------------------------------------------------- */}
           <Row>
             <Col xl={8}>
               <Row>
-                {/* summary cards */}
                 {Cardsdata.map((item, idx) => (
                   <Col xxl={3} xl={6} key={idx}>
                     <Spkcardscomponent
@@ -103,13 +95,11 @@ const Sales = () => {
                   </Col>
                 ))}
 
-                {/* map card --------------------------------------------------- */}
                 <Col xxl={16} xl={12}>
                   <Card className="custom-card">
                     <Card.Header className="justify-content-between">
                       <Card.Title>Firm Properties</Card.Title>
 
-                      {/* status dropdown */}
                       <SpkDropdown
                         toggleas="a"
                         Customtoggleclass="btn btn-sm btn-light text-muted"
@@ -134,7 +124,6 @@ const Sales = () => {
                     </Card.Header>
 
                     <Card.Body>
-                      {/* pass filter down */}
                       <MapContainer filters={{status: statusFilter}} savedOnly={true} />
                     </Card.Body>
                   </Card>
@@ -142,7 +131,6 @@ const Sales = () => {
               </Row>
             </Col>
 
-            {/* right‑hand promo banner --------------------------------------- */}
             <Col xl={4}>
               <Row>
                 <Col xl={12}>

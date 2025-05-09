@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Spinner from "react-bootstrap/Spinner";
 import React from "react";
 
 const MapComponent = dynamic(() => import("../MapComponent"), { ssr: false });
@@ -21,5 +22,10 @@ interface Props {
 }
 
 export default function MapContainer({ filters, flyTo, savedOnly = false }: Props) {
-  return <MapComponent {...filters} flyTo={flyTo} savedOnly={savedOnly} />;
+  return (
+  <>
+  
+    <MapComponent {...filters} flyTo={flyTo} savedOnly={savedOnly} />
+  </>
+  );
 }
