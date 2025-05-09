@@ -28,7 +28,7 @@ services:
     networks:
       - app-network
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
     ports:
       - "3002:3000" 
 
