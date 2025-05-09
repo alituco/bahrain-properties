@@ -22,7 +22,7 @@ services:
       - "5000:5000"
 
   frontend:
-    build: ./next
+    build: ./bhproperties-webapp
     container_name: bahrain-properties-frontend
     restart: always
     networks:
@@ -30,7 +30,7 @@ services:
     environment:
       - NODE_ENV=production
     ports:
-      - "3002:3000"  # Host port 3002 to avoid conflict with the first app
+      - "3002:3000" 
 
 networks:
   app-network:

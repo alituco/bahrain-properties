@@ -14,10 +14,10 @@ RUN npm install
 COPY . .
 
 # Build the Next.js application
-RUN yarn run build
+RUN npm run build
 
 # Expose the port the app runs on
 EXPOSE 3000
 
 # Start the application
-CMD ["yarn", "run", "dev"]
+CMD ["npm", "run", "dev"]
