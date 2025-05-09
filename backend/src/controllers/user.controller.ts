@@ -67,8 +67,8 @@ export const deleteUser: RequestHandler = async (req, res, next) => {
     const { userId } = req.params;
     const { rows } = await pool.query(
       `DELETE FROM users
-         WHERE id = $1 AND firm_id = $2
-         RETURNING id, email`,
+         WHERE user_id = $1 AND firm_id = $2
+         RETURNING user_id, email`,
       [userId, admin.firm_id]
     );
     if (rows.length === 0) {

@@ -194,3 +194,14 @@
       .custom-card .mapbox-container {
         overflow: hidden;
       }
+
+      .mapbox-ctrl-logo{
+        display: none !important;
+      }
+      .mapbox-improve-map {
+        display: none !important;
+      }
+
+      .mapboxgl-ctrl-bottom-right {
+        display: none !important;
+      }

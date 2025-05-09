@@ -1,336 +1,275 @@
-import { RequestHandler } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import Mailgun from 'mailgun.js';
-import FormData from 'form-data';
-import { pool } from '../config/db';
-import { config } from '../config/env';
- 
+import { RequestHandler } from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import Mailgun from "mailgun.js";
+import FormData from "form-data";
+import { pool } from "../config/db";
+import { config } from "../config/env";
 
-
-function generateOTP(length = 6): string {
-  let otp = '';
-  const digits = '0123456789';
-  for (let i = 0; i < length; i++) {
-    otp += digits[Math.floor(Math.random() * digits.length)];
-  }
-  return otp;
+function generateOTP(len = 6) {
+  const d = "0123456789";
+  return Array.from({ length: len }, () => d[Math.random() * d.length | 0]).join("");
 }
 
 const mailgun = new Mailgun(FormData);
-
-if (!process.env.MAILGUN_API_KEY) {
-  throw new Error('MAILGUN_API_KEY environment variable is required');
-}
-
 const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY,
-  url: process.env.MAILGUN_API_URL || undefined, 
+  username: "api",
+  key: process.env.MAILGUN_API_KEY!,
+  url: process.env.MAILGUN_API_URL || undefined,
 });
 
-
-// helper function to send email
-async function sendMail({
-  from,
-  to,
-  subject,
-  text,
-  html,
-  template,
-}: {
-  from: string;
-  to: string | string[];
-  subject: string;
-  text?: string;
-  html?: string;
-  template?: string;
+async function sendMail(opts: {
+  from: string; to: string | string[]; subject: string;
+  text?: string; html?: string; template?: string;
 }) {
-  try {
-    const data = await mg.messages.create(process.env.MAILGUN_DOMAIN as string, {
-      from,
-      to,
-      subject,
-      text,
-      html,
-      template,
-    });
-    console.log('Mail sent:', data);
-    return data;
-  } catch (error) {
-    console.error('Mail sending error:', error);
-    throw error;
-  }
+  await mg.messages.create(process.env.MAILGUN_DOMAIN!, opts);
 }
 
-
-// Login Endpoint
 export const login: RequestHandler = async (req, res) => {
   const { email, password } = req.body;
-
-  console.log("LOGGING:  ", process.env.EMAIL_HOST, process.env.EMAIL_PORT, process.env.EMAIL_USER);
-
   try {
-    const userResult = await pool.query(
-      'SELECT user_id, email, password FROM users WHERE email = $1 LIMIT 1',
-      [email]
+    const u = await pool.query(
+      `SELECT user_id,password FROM users WHERE email=$1 LIMIT 1`, [email]
     );
-    if (userResult.rows.length === 0) {
-      res.status(401).json({ success: false, message: 'Invalid credentials' });
-      return;
-    }
-    const user = userResult.rows[0];
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      res.status(401).json({ success: false, message: 'Invalid credentials' });
-      return;
+    if (!u.rowCount || !(await bcrypt.compare(password, u.rows[0].password))) {
+      res.status(401).json({ success: false, message: "Invalid credentials" }); return;
     }
     const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     await pool.query(
-      `INSERT INTO email_verifications (user_id, otp, expires_at)
-       VALUES ($1, $2, $3)`,
-      [user.user_id, otp, expiresAt]
+      `INSERT INTO email_verifications (user_id,otp,expires_at)
+       VALUES ($1,$2,NOW()+INTERVAL '15 min')`,
+      [u.rows[0].user_id, otp]
     );
     await sendMail({
       from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
       to: email,
-      subject: 'Your Login OTP',
-      text: `Your OTP is ${otp}, it expires in 15 minutes.`,
-      html: `<p>Your OTP is <b>${otp}</b>. It expires in 15 minutes.</p>`
+      subject: "Login OTP",
+      text: `Your OTP is ${otp}`,
+      html: `<p>Your OTP is <b>${otp}</b></p>`,
     });
-    res.cookie("user_id", user.user_id.toString(), {
-      httpOnly: false,
-      maxAge: 15 * 60 * 1000,
-    });
-    res.json({ success: true, message: 'OTP sent to your email.' });
-    return;
-  } catch (error) {
-    console.error('Error in login:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-    return;
+    res.cookie("otp_user", u.rows[0].user_id.toString(), { httpOnly: false, maxAge: 9e5 });
+    res.json({ success: true, message: "OTP sent" });
+  } catch (e) {
+    console.error(e); res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-// Verify OTP Endpoint
 export const verifyOTP: RequestHandler = async (req, res) => {
   const { otp } = req.body;
-  const user_id = req.cookies?.user_id;
-  if (!user_id) {
-    res.status(400).json({ success: false, message: 'User ID is missing. Please log in again.' });
-    return;
-  }
+  const user_id = req.cookies?.otp_user;
+  if (!user_id) { res.status(400).json({ success:false, message:"Login expired" }); return; }
+
   try {
-    const result = await pool.query(
-      `SELECT * FROM email_verifications
-       WHERE user_id = $1
-         AND otp = $2
-         AND used = FALSE
-         AND expires_at > NOW()
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [user_id, otp]
+    const v = await pool.query(
+      `UPDATE email_verifications
+         SET used=TRUE
+       WHERE user_id=$1 AND otp=$2 AND used=FALSE AND expires_at>NOW()
+       RETURNING id`, [user_id, otp]
     );
-    if (result.rows.length === 0) {
-      res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
-      return;
-    }
-    const record = result.rows[0];
-    await pool.query('UPDATE email_verifications SET used = TRUE WHERE id = $1', [record.id]);
-    const userResult = await pool.query(
-      'SELECT "isVerified" FROM users WHERE user_id = $1',
-      [user_id]
-    );
-    if (userResult.rows.length === 0 || userResult.rows[0].isVerified === false) {
-      res.status(400).json({
-        success: false,
-        message: 'Account not verified. Please verify your account.'
-      });
-      return;
-    }
-    const token = jwt.sign(
-      { user_id, email_verified: true },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: '1d' }
-    );
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-    res.json({ success: true, message: 'Logged in successfully.', token });
-    return;
-  } catch (error) {
-    console.error('Error verifying OTP:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-    return;
+    if (!v.rowCount) { res.status(400).json({ success:false,message:"OTP invalid" }); return; }
+
+    const token = jwt.sign({ user_id }, config.jwtSecret, { expiresIn: "1d" });
+    res.cookie("token", token, { httpOnly:true, maxAge: 864e5 });
+    res.json({ success:true, message:"Logged in", token });
+  } catch (e) {
+    console.error(e); res.status(500).json({ success:false, message:"Server error" });
   }
 };
 
-// Registration Endpoint
 export const register: RequestHandler = async (req, res) => {
   const { first_name, last_name, email, password, login_code } = req.body;
+
   try {
-    const firmJoinQuery = `
-      SELECT
-        f.firm_id,
-        f.firm_name,
-        pt.max_number_of_users
-      FROM firms f
-      JOIN plan_tiers pt ON f.plan = pt.tier_name
-      WHERE f.login_code = $1
-      LIMIT 1;
-    `;
-    const firmResult = await pool.query(firmJoinQuery, [login_code]);
-    if (firmResult.rows.length === 0) {
-      res.status(400).json({ success: false, message: 'Invalid registration code.' });
+
+    const firmQ = await pool.query(
+      `SELECT f.firm_id,
+              f.firm_name,
+              pt.max_number_of_users
+         FROM firms f
+         JOIN plan_tiers pt ON f.plan = pt.tier_name
+        WHERE f.login_code = $1
+        LIMIT 1`,
+      [login_code]
+    );
+    if (!firmQ.rowCount) {
+      res.status(400).json({ success: false, message: "Invalid registration code." });
       return;
     }
-    const firm = firmResult.rows[0];
-    const userCountResult = await pool.query(
-      'SELECT COUNT(*) AS count FROM users WHERE firm_id = $1',
+    const firm = firmQ.rows[0];
+
+    const cntQ = await pool.query(
+      `SELECT COUNT(*)::int AS c FROM users WHERE firm_id = $1`,
       [firm.firm_id]
     );
-    const currentCount = parseInt(userCountResult.rows[0].count, 10);
-    if (currentCount >= firm.max_number_of_users) {
-      res.status(400).json({
-        success: false,
-        message: 'Maximum number of users reached for this firm.'
-      });
+    if (cntQ.rows[0].c >= firm.max_number_of_users) {
+      res.status(400).json({ success: false, message: "Firm user limit reached." });
       return;
     }
-    const existingUser = await pool.query(
-      'SELECT user_id FROM users WHERE email = $1 LIMIT 1',
+
+    const existsQ = await pool.query(
+      `SELECT 1 FROM users WHERE email = $1 LIMIT 1`,
       [email]
     );
-    if (existingUser.rows.length > 0) {
-      res.status(400).json({ success: false, message: 'Email already registered.' });
+    if (existsQ.rowCount) {
+      res.status(400).json({ success: false, message: "Email already verified; please log in." });
       return;
     }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const insertQuery = `
-      INSERT INTO users (
+
+    const tokenQ = await pool.query(
+      `SELECT id FROM registration_tokens
+        WHERE email = $1 AND used = FALSE
+        LIMIT 1`,
+      [email]
+    );
+
+    const otp = generateOTP();
+    const expires = "NOW() + INTERVAL '15 min'";
+
+    if (tokenQ.rowCount) {
+      const tokenId = tokenQ.rows[0].id;
+
+      await pool.query(
+        `UPDATE registration_tokens
+            SET otp = $1,
+                expires_at = ${expires}
+          WHERE id = $2`,
+        [otp, tokenId]
+      );
+
+      res.cookie("reg_id", tokenId.toString(), { httpOnly: false, maxAge: 9 * 60 * 1000 });
+
+      await sendMail({
+        from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
+        to: email,
+        subject: "New OTP for Registration",
+        text: `Your new OTP is ${otp}, valid for 15 minutes.`,
+        html: `<p>Your new OTP is <strong>${otp}</strong>. It is valid for 15 minutes.</p>`,
+      });
+
+      res.json({ success: true, message: "OTP resent to your email." });
+      return;
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    const insertQ = await pool.query(
+      `INSERT INTO registration_tokens
+       (first_name, last_name, email, password,
+        firm_id, firm_name, role, otp, expires_at)
+       VALUES ($1,$2,$3,$4,$5,$6,'staff',$7, ${expires})
+       RETURNING id`,
+      [
         first_name,
         last_name,
-        phone_number,
         email,
-        password,
-        real_estate_firm,
-        firm_id,
-        role
-      )
-      VALUES ($1, $2, 'N/A', $3, $4, $5, $6, 'staff')
-      RETURNING user_id;
-    `;
-    const userInsert = await pool.query(insertQuery, [
-      first_name,
-      last_name,
-      email,
-      hashedPassword,
-      firm.firm_name,
-      firm.firm_id
-    ]);
-    const newUserId = userInsert.rows[0].user_id;
-    res.cookie("user_id", newUserId.toString(), {
-      httpOnly: false,
-      maxAge: 15 * 60 * 1000,
-    });
-    const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-    await pool.query(
-      `INSERT INTO email_verifications (user_id, otp, expires_at)
-       VALUES ($1, $2, $3)`,
-      [newUserId, otp, expiresAt]
+        hash,
+        firm.firm_id,
+        firm.firm_name,
+        otp,
+      ]
     );
-    await sendMail({
-      from: `NPS Bahrain ${process.env.MAILGUN_FROM}`,
-      to: email,
-      subject: 'Complete Registration with OTP',
-      text: `Your registration OTP is ${otp}, valid for 15 min.`,
-      html: `<p>Your registration OTP is <strong>${otp}</strong>, valid for 15 min.</p>`
-    });
-    res.json({ success: true, message: 'User registered. OTP sent to your email.', user_id: newUserId });
-    return;
-  } catch (error) {
-    console.error('Error in register:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-    return;
-  }
-};
 
-// Verify Registration OTP Endpoint
-export const verifyRegisterOTP: RequestHandler = async (req, res) => {
-  const { user_id, otp } = req.body;
-  try {
-    const result = await pool.query(
-      `SELECT * FROM email_verifications
-       WHERE user_id = $1
-         AND otp = $2
-         AND used = FALSE
-         AND expires_at > NOW()
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [user_id, otp]
-    );
-    if (result.rows.length === 0) {
-      res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
-      return;
-    }
-    await pool.query('UPDATE email_verifications SET used = TRUE WHERE id = $1', [result.rows[0].id]);
-    await pool.query('UPDATE users SET "isVerified" = TRUE WHERE user_id = $1', [user_id]);
-    const token = jwt.sign({ user_id }, config.jwtSecret, { expiresIn: '1d' });
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: false, //process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-    res.json({ success: true, message: 'Registration OTP verified, account active.', token });
-    return;
-  } catch (error) {
-    console.error('Error in verifyRegisterOTP:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-    return;
-  }
-};
+    const regId = insertQ.rows[0].id;
 
-export const resendOTP: RequestHandler = async (req, res) => {
-  const { user_id } = req.body;
-  try {
-    const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-    await pool.query(
-      `INSERT INTO email_verifications (user_id, otp, expires_at)
-       VALUES ($1, $2, $3)`,
-      [user_id, otp, expiresAt]
-    );
-    const userResult = await pool.query(
-      'SELECT email FROM users WHERE user_id = $1',
-      [user_id]
-    );
-    if (userResult.rows.length === 0) {
-      res.status(400).json({ success: false, message: 'User not found.' });
-      return;
-    }
-    const email = userResult.rows[0].email;
+    res.cookie("reg_id", regId.toString(), { httpOnly: false, maxAge: 9 * 60 * 1000 });
+
     await sendMail({
       from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
       to: email,
-      subject: 'Your New OTP for Verification',
-      text: `Your new OTP is ${otp}, valid for 15 minutes.`,
-      html: `<p>Your new OTP is <strong>${otp}</strong>, valid for 15 minutes.</p>`
+      subject: "Complete Registration",
+      text: `Your OTP is ${otp}, valid for 15 minutes.`,
+      html: `<p>Your OTP is <strong>${otp}</strong>. It is valid for 15 minutes.</p>`,
     });
-    res.json({ success: true, message: 'OTP resent successfully.' });
-    return;
-  } catch (error) {
-    console.error('Error in resendOTP:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-    return;
+
+    res.json({ success: true, message: "OTP sent to your email." });
+  } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-export const logout: RequestHandler = async (req, res) => {
-  res.clearCookie("token");
-  res.clearCookie("user_id");
-  res.json({ success: true, message: 'Logged out successfully. ' });
-  return;
-}
+
+export const verifyRegisterOTP: RequestHandler = async (req,res)=>{
+  const { otp } = req.body;
+  const reg_id  = req.cookies?.reg_id;
+  if (!reg_id) { res.status(400).json({success:false,message:"Expired"}); return; }
+
+  try {
+    const tok = await pool.query(
+      `UPDATE registration_tokens
+         SET used=TRUE
+       WHERE id=$1 AND otp=$2 AND used=FALSE AND expires_at>NOW()
+       RETURNING *`, [reg_id, otp]
+    );
+    if (!tok.rowCount) { res.status(400).json({success:false,message:"OTP invalid"}); return; }
+
+    const r = tok.rows[0];
+
+
+    const c = await pool.query(
+      `SELECT COUNT(*)::int AS c FROM users WHERE firm_id=$1`, [r.firm_id]
+    );
+    const limitQ = await pool.query(
+      `SELECT pt.max_number_of_users
+         FROM plan_tiers pt
+         JOIN firms f ON f.plan=pt.tier_name
+        WHERE f.firm_id=$1`, [r.firm_id]
+    );
+    if (c.rows[0].c >= limitQ.rows[0].max_number_of_users) {
+      res.status(400).json({success:false,message:"Firm limit reached"}); return;
+    }
+
+    const u = await pool.query(
+      `INSERT INTO users
+       (first_name,last_name,phone_number,email,password,
+        real_estate_firm,firm_id,role,"isVerified")
+       VALUES ($1,$2,'N/A',$3,$4,$5,$6,$7,TRUE)
+       RETURNING user_id`, [
+         r.first_name, r.last_name, r.email, r.password,
+         r.firm_name,  r.firm_id,   r.role
+       ]
+    );
+    const userId = u.rows[0].user_id;
+    const token  = jwt.sign({ user_id:userId }, config.jwtSecret, { expiresIn:"1d" });
+
+    res.cookie("token", token, { httpOnly:true, maxAge: 864e5 });
+    res.json({ success:true, message:"Account verified", token });
+  } catch(e){
+    console.error(e); res.status(500).json({success:false,message:"Server error"});
+  }
+};
+
+
+export const resendRegisterOTP: RequestHandler = async (req,res)=>{
+  const reg_id = req.cookies?.reg_id;
+  if (!reg_id) { res.status(400).json({success:false,message:"Expired"}); return; }
+
+  try {
+    const emailQ = await pool.query(
+      `SELECT email FROM registration_tokens WHERE id=$1 AND used=FALSE`, [reg_id]
+    );
+    if (!emailQ.rowCount) {
+      res.status(400).json({success:false,message:"Registration not pending"}); return;
+    }
+    const otp = generateOTP();
+    await pool.query(
+      `UPDATE registration_tokens
+          SET otp=$1, expires_at=NOW()+INTERVAL '15 min'
+        WHERE id=$2`, [otp, reg_id]
+    );
+    await sendMail({
+      from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
+      to: emailQ.rows[0].email,
+      subject: "New OTP",
+      text: `Your new OTP is ${otp}`,
+      html: `<p>Your new OTP is <b>${otp}</b></p>`,
+    });
+    res.json({ success:true, message:"OTP resent" });
+  } catch(e){
+    console.error(e); res.status(500).json({success:false,message:"Server error"});
+  }
+};
+
+export const logout: RequestHandler = (req,res)=>{
+  res.clearCookie("token"); res.clearCookie("otp_user"); res.clearCookie("reg_id");
+  res.json({ success:true, message:"Logged out" });
+};
