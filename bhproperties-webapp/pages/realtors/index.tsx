@@ -31,7 +31,6 @@ const MembersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  /* 1) auth profile ------------------------------------------------------ */
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -49,7 +48,6 @@ const MembersPage = () => {
     return () => { cancelled = true; };
   }, []);
 
-  /* 2) firm members ------------------------------------------------------ */
   useEffect(() => {
     if (!me) return;
     (async () => {
@@ -71,7 +69,6 @@ const MembersPage = () => {
     })();
   }, [me]);
 
-  /* delete (admin‑only) -------------------------------------------------- */
   const isAdmin = me?.role?.toLowerCase() === "admin";
 
   const handleDelete = async (u: User) => {
@@ -92,7 +89,6 @@ const MembersPage = () => {
     }
   };
 
-  /* render --------------------------------------------------------------- */
   if (loading) {
     return (
       <div className="d-flex justify-content-center py-5">
@@ -105,7 +101,6 @@ const MembersPage = () => {
     <Fragment>
       <Seo title="Firm Realtors" />
 
-      {/* breadcrumb ------------------------------------------------------- */}
       <div className="d-flex align-items-center justify-content-between page-header-breadcrumb flex-wrap gap-2">
         <div>
           <SpkBreadcrumb Customclass="mb-1">
@@ -120,7 +115,6 @@ const MembersPage = () => {
         </div>
       </div>
 
-      {/* main grid -------------------------------------------------------- */}
       <Row>
         <Col xl={12}>
           <Card className="custom-card">

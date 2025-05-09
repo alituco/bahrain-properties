@@ -411,13 +411,13 @@ const Header = ({ local_varaiable, ThemeChanger }: any) => {
     if (!allElement2.length || inputvalue === "") {
       if (inputvalue === "") {
         setShow2(false);
-        setsearchval("Type something");
+        setsearchval("Search");
         setsearchcolor("text-dark");
       }
       if (!allElement2.length) {
         setShow2(false);
-        setsearchcolor("text-danger");
-        setsearchval("There is no component with this name");
+        setsearchcolor("");
+        setsearchval("There is no result found.");
       }
     }
     setNavData(allElement2);
