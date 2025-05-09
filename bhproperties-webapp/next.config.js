@@ -3,7 +3,6 @@
 const path = require('path');
 const isProd = process.env.NODE_ENV === "production";
 const nextConfig = {
-  output: "export",  // Uncomment the following line only for building purposes. By default, this line should remain commented out.
   reactStrictMode: false,
   trailingSlash: true,
   basePath: isProd ? "" : undefined,
