@@ -18,7 +18,7 @@ ENV NODE_ENV=development
 # Build the Next.js application
 RUN npm run build
 
-# Expose the port the app runs on
+# Expose the port
 EXPOSE 3000
 
 # Start the application
