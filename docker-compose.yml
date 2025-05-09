@@ -27,8 +27,6 @@ services:
     restart: always
     networks:
       - app-network
-    environment:
-      - NODE_ENV=production
     ports:
       - "3002:3000" 
 
