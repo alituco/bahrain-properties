@@ -80,7 +80,6 @@ export const register: RequestHandler = async (req, res) => {
   const { first_name, last_name, email, password, login_code } = req.body;
 
   try {
-
     const firmQ = await pool.query(
       `SELECT f.firm_id,
               f.firm_name,
@@ -89,7 +88,7 @@ export const register: RequestHandler = async (req, res) => {
          JOIN plan_tiers pt ON f.plan = pt.tier_name
         WHERE f.login_code = $1
         LIMIT 1`,
-      [login_code]
+      [login_code],
     );
     if (!firmQ.rowCount) {
       res.status(400).json({ success: false, message: "Invalid registration code." });
@@ -97,78 +96,46 @@ export const register: RequestHandler = async (req, res) => {
     }
     const firm = firmQ.rows[0];
 
+    // Checking if firm user limit is reached
     const cntQ = await pool.query(
       `SELECT COUNT(*)::int AS c FROM users WHERE firm_id = $1`,
-      [firm.firm_id]
+      [firm.firm_id],
     );
     if (cntQ.rows[0].c >= firm.max_number_of_users) {
       res.status(400).json({ success: false, message: "Firm user limit reached." });
       return;
     }
 
-    const existsQ = await pool.query(
+    const exists = await pool.query(
       `SELECT 1 FROM users WHERE email = $1 LIMIT 1`,
-      [email]
+      [email],
     );
-    if (existsQ.rowCount) {
+    if (exists.rowCount) {
       res.status(400).json({ success: false, message: "Email already verified; please log in." });
       return;
     }
 
-    const tokenQ = await pool.query(
-      `SELECT id FROM registration_tokens
-        WHERE email = $1 AND used = FALSE
-        LIMIT 1`,
-      [email]
-    );
+    const otp   = generateOTP();
+    const hash  = await bcrypt.hash(password, 10);
 
-    const otp = generateOTP();
-    const expires = "NOW() + INTERVAL '15 min'";
-
-    if (tokenQ.rowCount) {
-      const tokenId = tokenQ.rows[0].id;
-
-      await pool.query(
-        `UPDATE registration_tokens
-            SET otp = $1,
-                expires_at = ${expires}
-          WHERE id = $2`,
-        [otp, tokenId]
-      );
-
-      res.cookie("reg_id", tokenId.toString(), { httpOnly: false, maxAge: 9 * 60 * 1000 });
-
-      await sendMail({
-        from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
-        to: email,
-        subject: "New OTP for Registration",
-        text: `Your new OTP is ${otp}, valid for 15 minutes.`,
-        html: `<p>Your new OTP is <strong>${otp}</strong>. It is valid for 15 minutes.</p>`,
-      });
-
-      res.json({ success: true, message: "OTP resent to your email." });
-      return;
-    }
-
-    const hash = await bcrypt.hash(password, 10);
-    const insertQ = await pool.query(
+    const tokenRow = await pool.query(
       `INSERT INTO registration_tokens
-       (first_name, last_name, email, password,
-        firm_id, firm_name, role, otp, expires_at)
-       VALUES ($1,$2,$3,$4,$5,$6,'staff',$7, ${expires})
-       RETURNING id`,
-      [
-        first_name,
-        last_name,
-        email,
-        hash,
-        firm.firm_id,
-        firm.firm_name,
-        otp,
-      ]
+        (first_name, last_name, email, password,
+          firm_id, firm_name, role, otp, expires_at)
+      VALUES ($1,$2,$3,$4,$5,$6,'staff',$7, NOW() + INTERVAL '15 min')
+      ON CONFLICT (email)
+      DO UPDATE
+          SET otp        = EXCLUDED.otp,
+              password   = EXCLUDED.password,
+              expires_at = NOW() + INTERVAL '15 min',
+              used      = FALSE
+      RETURNING id`,        
+      [ first_name, last_name, email, hash,
+        firm.firm_id, firm.firm_name, otp ]
     );
 
-    const regId = insertQ.rows[0].id;
+    // id is the primary key of the registration_tokens table
+    const regId = tokenRow.rows[0].id;
 
     res.cookie("reg_id", regId.toString(), { httpOnly: false, maxAge: 9 * 60 * 1000 });
 
