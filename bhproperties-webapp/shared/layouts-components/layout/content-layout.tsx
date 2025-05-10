@@ -3,7 +3,7 @@ import Footer from '@/shared/layouts-components/footer/footer';
 import Header from '@/shared/layouts-components/header/header';
 import Sidebar from '@/shared/layouts-components/sidebar/sidebar';
 import Switcher from '@/shared/layouts-components/switcher/switcher';
-import React, { Fragment } from 'react'
+import React from 'react'
 import Backtotop from '@/shared/layouts-components/backtotop/backtotop';
 import Loader from '@/shared/layouts-components/loader/loader';
 import store from '@/shared/redux/store';
