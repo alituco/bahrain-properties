@@ -19,6 +19,7 @@ jobs:
           node-version: '20'
         
       - name : Run the tests
+        working-directory: ./bhproperties-webapp
         run: |
           npm ci
           npm run test:ci
