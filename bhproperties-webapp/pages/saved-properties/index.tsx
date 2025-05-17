@@ -64,8 +64,6 @@ export default function FirmPropertiesPage() {
   const mapSectionRef = useRef<HTMLDivElement>(null);
   const statusFilter = filters.status ?? "all";
 
-  // helper for a custom smooth scroll over `duration` ms,
-  // landing `offsetPx` above the element top
   function smoothScrollTo(el: HTMLElement, duration = 800, offsetPx = 100) {
     const startY = window.scrollY;
     const targetY =
@@ -170,12 +168,16 @@ export default function FirmPropertiesPage() {
     } finally {
       setBusyId(null);
     }
-  };
+  }; 
 
   const applyFilters = (f: Record<string, string>) => {
     setFilters(f);
     setShowFilter(false);
     loadRows(f);
+  };
+
+  const navigateToProperty = (row: FirmProperty) => {
+    router.push(`/property/${row.parcel_no}`);
   };
 
   const clearFilters = () => {
@@ -279,16 +281,22 @@ export default function FirmPropertiesPage() {
                   tableClass="text-nowrap table-bordered"
                   showCheckbox={false}
                   header={[
+                    { title: " Property ID" },
                     { title: "Area" },
                     { title: "Block" },
                     { title: "Status" },
-                    { title: "Asking Price" },
+                    { title: "Asking Price" },
                     { title: "Updated" },
                     { title: "Action" },
                   ]}
                 >
                   {rows.map((row) => (
                     <tr key={row.id}>
+                      <td> 
+                        <Link href={`/property/${row.parcel_no}`} className="text-blue hover:underline"> 
+                          {row.id}
+                        </Link> 
+                      </td>
                       <td>{row.area_namee}</td>
                       <td>{row.block_no}</td>
                       <td>
