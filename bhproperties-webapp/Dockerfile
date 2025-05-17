@@ -1,25 +1,23 @@
-# Use Node.js LTS version
-FROM node:20
-
-# Set working directory
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# -- install production deps --
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the application code
+# -- copy source & build --
 COPY . .
+RUN npm run build           # generates .next/** incl. .next/static/media/*.woff2
 
+
+FROM node:20-alpine AS runner
+WORKDIR /app
 ENV NODE_ENV=production
 
-# Build the Next.js application
-RUN npm run build
+COPY --from=builder /app/.next        ./.next
+COPY --from=builder /app/public       ./public
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
-# Expose the port
 EXPOSE 3000
-
-# Start the application
-CMD ["npm", "start"]
+CMD ["npm", "start"]                 
