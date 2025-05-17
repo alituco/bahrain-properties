@@ -63,8 +63,6 @@ opacity
 typography
 */
 /* FONT */
-/* Poppins */
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 :root {
   --body-bg-rgb: 249, 250, 252;
   --primary-rgb: 92, 103, 247;
