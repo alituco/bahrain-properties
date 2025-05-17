@@ -1,5 +1,4 @@
 import '../styles/globals.scss';                           
-import '../public/assets/icon-fonts/remixicon/fonts/remixicon.css';   
 
 import ContentLayout from '@/shared/layouts-components/layout/content-layout';
 import Authenticationlayout from '@/shared/layouts-components/layout/authentication-layout';
