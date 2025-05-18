@@ -9,6 +9,7 @@ import predictRoutes from './routes/predict.routes';
 import valuationRoutes from './routes/valuation.routes';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import calendarRoutes from "./routes/calendar.routes";
 
 const app = express();
 
@@ -28,6 +29,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Mount route handlers
+app.use('/calendarAdd',calendarRoutes);
+app.use('/calendar',calendarRoutes)
 app.use('/coordinates', coordinatesRoutes);
 app.use('/parcelData', parcelRoutes);
 app.use('/predict', predictRoutes);

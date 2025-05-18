@@ -12,10 +12,13 @@ const NavbarContainer = styled("nav")({
   boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
 });
 
-// const Logo = styled("div")({
-//   fontSize: "1.5rem",
-//   fontWeight: "bold",
-// });
+const LogoStyle = styled("div")({
+  fontSize: "1.5rem",
+  fontWeight: "bold",
+  backgroundColor:"#ba112a",
+  height:"10%"
+
+});
 
 const NavLinks = styled("div")({
     display: "flex",
@@ -24,6 +27,12 @@ const NavLinks = styled("div")({
     flex: 1,
   });
 
+  const LogoImage = styled("img")({
+    display: "block",
+    margin: "0 auto",
+    width:"200px"
+  });
+  
 const NavLink = styled("a")({
   color: "#fff",
   textDecoration: "none",
@@ -33,9 +42,13 @@ const NavLink = styled("a")({
     color: "#df5a6d", 
   },
 });
-//
+
 export default function Navbar() {
   return (
+    <>
+    <LogoStyle>
+    <LogoImage src="/logo.png" alt="Logo" />
+    </LogoStyle>
     <NavbarContainer>
       <NavLinks>
         <NavLink href="/">Home</NavLink>
@@ -47,5 +60,6 @@ export default function Navbar() {
         <NavLink href="/contact">Contact</NavLink>
       </NavLinks>
     </NavbarContainer>
+    </>
   );
 }
