@@ -88,6 +88,27 @@ export default function LoginWithOTP() {
     }
   }
 
+  async function resendOtp() {
+    setOtpMsg("Resending OTP…");
+    try {
+      const r = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/resend-login-otp`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email: form.email }),
+        }
+      );
+      const d = await r.json();
+      if (d.success) setOtpMsg("");
+      else setOtpMsg(d.message || "Failed to resend OTP.");
+    } catch (err) {
+      console.error(err);
+      setOtpMsg("Network error.");
+    }
+  }
+
   return (
     <>
       {msg && <SpkAlert variant="danger">{msg}</SpkAlert>}
@@ -162,6 +183,9 @@ export default function LoginWithOTP() {
         <Modal.Footer>
           <RBButton variant="secondary" onClick={() => setOtpModal(false)}>
             Cancel
+          </RBButton>
+          <RBButton variant="link" onClick={resendOtp}>
+            Resend OTP
           </RBButton>
           <RBButton variant="primary" onClick={verifyOtp}>
             Verify

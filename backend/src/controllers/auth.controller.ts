@@ -70,6 +70,48 @@ export const login: RequestHandler = async (req, res) => {
   }
 };
 
+export const resendLoginOTP: RequestHandler = async (req, res) => {
+  const user_id = req.cookies?.otp_user;    
+  if (!user_id) {
+    res.status(400).json({ success: false, message: "Login expired." });
+    return;
+  }
+
+  try {
+    const emailQ = await pool.query(
+      `SELECT email FROM users WHERE user_id = $1 LIMIT 1`,
+      [user_id]
+    );
+    if (!emailQ.rowCount) {
+      res.status(400).json({ success: false, message: "User not found." });
+      return;
+    }
+    const email = emailQ.rows[0].email;
+
+    const otp = generateOTP();
+    await pool.query(
+      `INSERT INTO email_verifications (user_id, otp, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '15 min')`,
+      [user_id, otp]
+    );
+
+    await sendMail({
+      from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
+      to: email,
+      subject: "New login OTP",
+      text: `Your new OTP is ${otp}`,
+      html: `<p>Your new OTP is <strong>${otp}</strong></p>`,
+    });
+
+    res.cookie("otp_user", user_id.toString(), { httpOnly: false, maxAge: 9 * 60 * 1000 });
+
+    res.json({ success: true, message: "OTP resent." });
+  } catch (err) {
+      console.error("resendLoginOTP error:", err);
+      res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 export const verifyOTP: RequestHandler = async (req, res) => {
   const { otp } = req.body;
   const user_id = req.cookies?.otp_user;
@@ -111,7 +153,7 @@ export const register: RequestHandler = async (req, res) => {
     res.status(400).json({ success: false, message: "CAPTCHA failed" });
     return;
   }
-  
+
   try {
     const firmQ = await pool.query(
       `SELECT f.firm_id,
