@@ -1,18 +1,22 @@
+
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# -- install production deps --
 COPY package*.json ./
-RUN npm ci
+RUN npm ci          # full deps for the build
 
-# -- copy source & build --
 COPY . .
-RUN npm run build           # generates .next/** incl. .next/static/media/*.woff2
-
+RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
+COPY package*.json ./
+RUN npm ci --omit=dev        # or: npm install --production
+
+COPY --from=builder /app/.next   ./.next
+COPY --from=builder /app/public  ./public
+
 EXPOSE 3000
-CMD ["npm", "start"]                 
+CMD ["npm", "start"]
