@@ -137,7 +137,7 @@ export default function RegisterForm() {
           <Form.Control name="registrationCode" value={form.registrationCode} onChange={onChange} required />
         </Form.Group>
 
-        <Container>
+        <Container className="d-flex justify-content-center">
           <ReCAPTCHA
             ref={recaptchaRef}
             sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
