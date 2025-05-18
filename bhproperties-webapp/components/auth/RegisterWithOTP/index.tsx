@@ -5,9 +5,14 @@ import { useRouter } from "next/navigation";
 import { Form, Modal, Button as RBButton } from "react-bootstrap";
 import SpkButton from "@/shared/@spk-reusable-components/reusable-uielements/spk-button";
 import SpkAlert  from "@/shared/@spk-reusable-components/reusable-uielements/spk-alert";
+import { Container } from "@mui/material";
+import ReCAPTCHA from "react-google-recaptcha";
 
 export default function RegisterForm() {
   const router = useRouter();
+
+  const recaptchaRef = React.useRef<ReCAPTCHA | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -28,6 +33,12 @@ export default function RegisterForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!captchaToken) {
+      setMsg("Please complete the CAPTCHA.");
+      return;
+    }
+
     setMsg("Registering…");
     try {
       const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
@@ -40,15 +51,21 @@ export default function RegisterForm() {
           email:      form.email,
           password:   form.password,
           login_code: form.registrationCode,
+          recaptchaToken: captchaToken,
         }),
       });
       const d = await r.json();
       if (d.success) {
         setMsg("");
-        setOtpModal(true);                
-      } else setMsg(d.message || "Registration failed.");
+        setOtpModal(true);       
+        resetCaptcha();         
+      } else {
+        setMsg(d.message || "Registration failed.");
+        resetCaptcha();
+      }
     } catch {
       setMsg("Network error.");
+      resetCaptcha();
     }
   }
 
@@ -58,7 +75,7 @@ export default function RegisterForm() {
       const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-register-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",              // reg_id cookie
+        credentials: "include",              
         body: JSON.stringify({ otp }),
       });
       const d = await r.json();
@@ -83,6 +100,11 @@ export default function RegisterForm() {
     } catch {
       setOtpMsg("Network error.");
     }
+  }
+
+  const resetCaptcha = () => {
+    recaptchaRef.current?.reset();
+    setCaptchaToken(null);
   }
 
   return (
@@ -115,12 +137,24 @@ export default function RegisterForm() {
           <Form.Control name="registrationCode" value={form.registrationCode} onChange={onChange} required />
         </Form.Group>
 
+        <Container>
+          <ReCAPTCHA
+            ref={recaptchaRef}
+            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+            onChange={(token) => {
+              setCaptchaToken(token);
+              setMsg("");
+            }}
+            onExpired={resetCaptcha}
+          />
+        </Container>
+
         <div className="d-grid mt-4">
           <SpkButton Buttontype="submit" Buttonvariant="primary">Register</SpkButton>
         </div>
       </Form>
 
-      {/* OTP modal */}
+
       <Modal show={otpModal} onHide={() => {}}>
         <Modal.Header>
           <Modal.Title>Enter OTP</Modal.Title>

@@ -26,7 +26,23 @@ async function sendMail(opts: {
 }
 
 export const login: RequestHandler = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, recaptchaToken } = req.body;
+
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  if (!secret) {
+    res.status(500).json({ success: false, message: "Server error" });
+    return;
+  }
+  const recaptchaResponse = await fetch(
+    `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${recaptchaToken}`,
+    { method: "POST" }
+  );
+
+  const success = await recaptchaResponse.json();
+  if (!success.success) {
+    res.status(400).json({ success: false, message: "CAPTCHA failed" });
+    return;
+  }
   try {
     const u = await pool.query(
       `SELECT user_id,password FROM users WHERE email=$1 LIMIT 1`, [email]
@@ -77,8 +93,25 @@ export const verifyOTP: RequestHandler = async (req, res) => {
 };
 
 export const register: RequestHandler = async (req, res) => {
-  const { first_name, last_name, email, password, login_code } = req.body;
+  const { first_name, last_name, email, password, login_code, recaptchaToken } = req.body;
 
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+
+  if (!secret) {
+    res.status(500).json({ success: false, message: "Please verify CAPTCHA." });
+    return;
+  }
+  const recaptchaResponse = await fetch(
+    `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${recaptchaToken}`,
+    { method: "POST" }
+  );
+
+  const success = await recaptchaResponse.json();
+  if (!success.success) {
+    res.status(400).json({ success: false, message: "CAPTCHA failed" });
+    return;
+  }
+  
   try {
     const firmQ = await pool.query(
       `SELECT f.firm_id,
