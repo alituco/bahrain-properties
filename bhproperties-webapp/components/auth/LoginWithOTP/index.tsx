@@ -1,24 +1,35 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Form,
   Modal,
   Button as RBButton,
 } from "react-bootstrap";
+import ReCAPTCHA from "react-google-recaptcha";        
 import SpkButton from "@/shared/@spk-reusable-components/reusable-uielements/spk-button";
-import SpkAlert from "@/shared/@spk-reusable-components/reusable-uielements/spk-alert";
+import SpkAlert  from "@/shared/@spk-reusable-components/reusable-uielements/spk-alert";
+import { Container, styled } from "@mui/material";
 
 export default function LoginWithOTP() {
   const router = useRouter();
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [msg, setMsg] = useState("");
+
+  const [form, setForm]   = useState({ email: "", password: "" });
+  const [msg, setMsg]     = useState("");
   const [showPwd, setShowPwd] = useState(false);
 
   const [otpModal, setOtpModal] = useState(false);
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp]       = useState("");
   const [otpMsg, setOtpMsg] = useState("");
+
+  const recaptchaRef = useRef<ReCAPTCHA | null>(null);          
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);   
+
+  const resetCaptcha = () => {
+    recaptchaRef.current?.reset();
+    setCaptchaToken(null);
+  }
 
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -27,22 +38,32 @@ export default function LoginWithOTP() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (!captchaToken) {
+      setMsg("Please complete the CAPTCHA.");
+      return;
+    }
     setMsg("Logging in…");
+
     try {
       const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, recaptchaToken: captchaToken }),   
       });
       const d = await r.json();
       if (d.success) {
         setMsg("");
         setOtpModal(true);
-      } else setMsg(d.message || "Login failed.");
+        resetCaptcha();
+      } else {
+        setMsg(d.message || "Login failed.");
+        resetCaptcha();
+      }
     } catch (err) {
       console.error(err);
       setMsg("Network error.");
+      resetCaptcha();
     }
   }
 
@@ -61,6 +82,27 @@ export default function LoginWithOTP() {
       const d = await r.json();
       if (d.success) router.push("/dashboard");
       else setOtpMsg(d.message || "OTP invalid.");
+    } catch (err) {
+      console.error(err);
+      setOtpMsg("Network error.");
+    }
+  }
+
+  async function resendOtp() {
+    setOtpMsg("Resending OTP…");
+    try {
+      const r = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/resend-login-otp`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email: form.email }),
+        }
+      );
+      const d = await r.json();
+      if (d.success) setOtpMsg("");
+      else setOtpMsg(d.message || "Failed to resend OTP.");
     } catch (err) {
       console.error(err);
       setOtpMsg("Network error.");
@@ -106,7 +148,17 @@ export default function LoginWithOTP() {
           </div>
         </div>
 
-        <div className="d-grid mt-4">
+        <Container className="d-flex justify-content-center">
+          <ReCAPTCHA
+            ref={recaptchaRef}
+            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+            onChange={(token) => setCaptchaToken(token)}
+            onExpired={() => setCaptchaToken(null)}
+            className="mb-2"
+          />
+        </Container>
+
+        <div className="d-grid mt-2">
           <SpkButton Buttontype="submit" Buttonvariant="primary">
             Send OTP
           </SpkButton>
@@ -131,6 +183,9 @@ export default function LoginWithOTP() {
         <Modal.Footer>
           <RBButton variant="secondary" onClick={() => setOtpModal(false)}>
             Cancel
+          </RBButton>
+          <RBButton variant="link" onClick={resendOtp}>
+            Resend OTP
           </RBButton>
           <RBButton variant="primary" onClick={verifyOtp}>
             Verify
