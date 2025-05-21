@@ -14,11 +14,9 @@ import { ensureAdmin }  from '../middleware/ensureAdmin';
 
 const router = Router();
 
-/* ---------- profile & firm users ---------- */
 router.get('/me', requireAuth, getProfile);
 router.get('/firms/:firmId/users', requireAuth, getUsersByFirm);
 
-/* ---------- admin-only firm code ---------- */
 router.put(
   '/firms/:firmId/registration-code',
   requireAuth,
@@ -26,12 +24,10 @@ router.put(
   updateFirmRegistrationCode
 );
 
-/* ---------- self-service user settings ----- */
 router.post('/email-change/request', requireAuth, requestEmailChange);
 router.post('/email-change/verify',  requireAuth, verifyEmailChangeOTP);
 router.post('/change-password',      requireAuth, changePassword);
 
-/* ---------- admin delete user -------------- */
 router.delete(
   '/users/:userId',
   requireAuth,

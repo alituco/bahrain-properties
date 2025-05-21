@@ -28,7 +28,6 @@ interface User {
 const Profile = () => {
   const router = useRouter();
 
-  /* -------- load user -------- */
   const [loading, setLoading] = useState(true);
   const [user,    setUser]    = useState<User | null>(null);
 
@@ -51,7 +50,7 @@ const Profile = () => {
     return () => { cancelled = true };
   }, []);
 
-  /* -------- form state -------- */
+  // Form field states
   const [email, setEmail]           = useState("");
   const [firmCode, setFirmCode]     = useState("");
   const [currentPw, setCurrentPw]   = useState("");
@@ -67,18 +66,18 @@ const Profile = () => {
     }
   }, [user]);
 
-  /* -------- messages ---------- */
+  // Message states
   const [success, setSuccess] = useState<string | null>(null);
   const [error,   setError]   = useState<string | null>(null);
   const ok  = (m:string) => { setError(null);   setSuccess(m); };
   const bad = (m:string) => { setSuccess(null); setError(m);   };
 
-  /* -------- overlay flags ----- */
+  // overlay (confirm action) states
   const [confirmPwFlag, setConfirmPwFlag] = useState(false);
   const [otpPhase, setOtpPhase]           = useState<"idle"|"sent">("idle");
   const [otpTargetEmail, setOtpTargetEmail] = useState("");
 
-  /* ===== API helpers ===== */
+  // api calls
 
   const saveFirmCode = async () => {
     const r = await fetch(
@@ -131,7 +130,6 @@ const Profile = () => {
     if (j.success) { setCurrentPw(""); setNewPw(""); setConfirmPw(""); }
   };
 
-  /* -------- UI -------- */
   return (
     <>
       {!loading && user && (
@@ -170,7 +168,6 @@ const Profile = () => {
                 </Card>
               </Col>
 
-              {/* main area */}
               <Col xl={9}>
                 <Card className="custom-card">
                   <Card.Body className="p-0">
