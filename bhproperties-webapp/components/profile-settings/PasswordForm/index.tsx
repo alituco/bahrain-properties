@@ -21,12 +21,11 @@ const PasswordForm = ({
   submit,
 }: Props) => (
   <Form onSubmit={(e) => e.preventDefault()}>
-    <Form.Group as={Row} className="mb-3">
-      <Form.Label column sm={4}>
-        Current password
-      </Form.Label>
+    <Form.Group as={Row} className="mb-3" controlId="current-password">
+      <Form.Label column sm={4}>Current password</Form.Label>
       <Col sm={8}>
         <Form.Control
+          role="textbox"                    
           type="password"
           value={currentPw}
           onChange={(e) => setCurrentPw(e.target.value)}
@@ -34,12 +33,11 @@ const PasswordForm = ({
       </Col>
     </Form.Group>
 
-    <Form.Group as={Row} className="mb-3">
-      <Form.Label column sm={4}>
-        New password
-      </Form.Label>
+    <Form.Group as={Row} className="mb-3" controlId="new-password">
+      <Form.Label column sm={4}>New password</Form.Label>
       <Col sm={8}>
         <Form.Control
+          role="textbox"                     
           type="password"
           value={newPw}
           onChange={(e) => setNewPw(e.target.value)}
@@ -47,12 +45,11 @@ const PasswordForm = ({
       </Col>
     </Form.Group>
 
-    <Form.Group as={Row} className="mb-4">
-      <Form.Label column sm={4}>
-        Confirm
-      </Form.Label>
+    <Form.Group as={Row} className="mb-4" controlId="confirm-password">
+      <Form.Label column sm={4}>Confirm</Form.Label>
       <Col sm={8}>
         <Form.Control
+          role="textbox"                     
           type="password"
           value={confirmPw}
           onChange={(e) => setConfirmPw(e.target.value)}
