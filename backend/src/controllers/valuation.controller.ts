@@ -3,11 +3,7 @@ import { pool } from '../config/db';
 import axios from 'axios';
 import { config } from '../config/env';
 
-/**
- * addValuation Controller
- * Receives JSON from the client and inserts a new valuation into the DB,
- * calling the Flask service if needed. Returns JSON response.
- */
+
 export const addValuation: RequestHandler = async (req, res) => {
   try {
     const {
@@ -20,13 +16,11 @@ export const addValuation: RequestHandler = async (req, res) => {
       listing_size,
     } = req.body;
 
-    // 1. Check password
     if (password !== '93939393') {
       res.status(403).json({ success: false, message: 'Invalid password.' });
-      return; // or return res.status(...) if you prefer
+      return; 
     }
 
-    // 2. Check if property exists
     const propertyResult = await pool.query(
       'SELECT 1 FROM properties WHERE parcel_no = $1 LIMIT 1;',
       [parcel_no]
@@ -43,7 +37,6 @@ export const addValuation: RequestHandler = async (req, res) => {
       }
     }
 
-    // 3. Check if this EXACT valuation type for this parcel already exists
     const existingVal = await pool.query(
       `
         SELECT 1
@@ -63,7 +56,6 @@ export const addValuation: RequestHandler = async (req, res) => {
       return;
     }
 
-    // 4. Insert the valuation
     await pool.query(
       `
         INSERT INTO valuations (
@@ -79,7 +71,6 @@ export const addValuation: RequestHandler = async (req, res) => {
       [parcel_no, valuation_type, valuation_amount, agent_name, num_of_roads, listing_size]
     );
 
-    // Return success
     res.json({
       success: true,
       message: 'Valuation inserted successfully.',

@@ -157,6 +157,17 @@
         z-index: 99;
     }
 }
+
+// Custom CSS
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  background: rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(2px);
+}
+
+
 @media (min-width: 992px) {
     [data-vertical-style="detached"][data-theme-mode="dark"][data-menu-styles="transparent"] .app-sidebar {
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -205,3 +216,4 @@
       .mapboxgl-ctrl-bottom-right {
         display: none !important;
       }
+

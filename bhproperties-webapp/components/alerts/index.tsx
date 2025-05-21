@@ -245,7 +245,7 @@ const SweetAlerts = () => {
     <Fragment>
       <Seo title="Projects-Sweetalerts" />
 
-      <Pageheader title="Apps" currentpage="Sweet Alerts" activepage="Sweet Alerts" />
+      <Pageheader title="Apps" currentpage="Sweet Alerts" activepage="Sweet Alerts" filter={false} share={false} />
       <Row>
         <Col xl={4}>
           <Card className=" custom-card">
