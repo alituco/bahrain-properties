@@ -638,7 +638,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }: any) => {
 			<aside className='app-sidebar sticky' onMouseOver={() => Onhover()}
 				onMouseLeave={() => Outhover()}>
 				<div className="main-sidebar-header">
-					<Link href="/components/dashboard/sales" className="header-logo">
+					<Link href="/dashboard/" className="header-logo">
 						<img src={`${process.env.NODE_ENV === 'production' ? basePath : ''}/assets/images/brand-logos/desktop-logo.png`} alt="logo" className="desktop-logo" />
 						<img src={`${process.env.NODE_ENV === 'production' ? basePath : ''}/assets/images/brand-logos/toggle-dark.png`} alt="logo" className="toggle-dark" />
 						<img src={`${process.env.NODE_ENV === 'production' ? basePath : ''}/assets/images/brand-logos/desktop-dark.png`} alt="logo" className="desktop-dark" />
