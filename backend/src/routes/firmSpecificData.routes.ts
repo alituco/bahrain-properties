@@ -1,10 +1,15 @@
-import { Router } from 'express';
-import FirmSpecificDataController from '../controllers/firmSpecificData.controller';
+import { Router } from "express";
+import {
+  getMedianAskingPricePerSqFt,
+  getMedianSoldPricePerSqFt,
+  getPipelineCounts,
+} from "../controllers/firmSpecificData.controller";
+import { requireAuth } from "../middleware/requireAuth";
 
-const firmSpecificDataRouter = Router();
+const r = Router();
 
-firmSpecificDataRouter.get('/firm/:firmId/median-asking-psqft',FirmSpecificDataController.medianAskingPricePerSqFt);
-firmSpecificDataRouter.get('/firm/:firmId/median-sold-psqft',FirmSpecificDataController.medianSoldPricePerSqFt);
-firmSpecificDataRouter.get( '/firm/:firmId/pipeline-counts', FirmSpecificDataController.pipelineCounts);
+r.get("/firm/:firmId/median-asking-psqft", requireAuth, getMedianAskingPricePerSqFt );
+r.get("/firm/:firmId/median-sold-psqft", requireAuth, getMedianSoldPricePerSqFt);
+r.get("/firm/:firmId/pipeline-counts", requireAuth, getPipelineCounts);
 
-export default firmSpecificDataRouter;
+export default r;

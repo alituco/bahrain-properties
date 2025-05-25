@@ -6,11 +6,10 @@ import { useRouter } from "next/router";
 import { Card, Col, Dropdown, Row } from "react-bootstrap";
 import Link from "next/link";
 
-import Spkcardscomponent from "@/shared/@spk-reusable-components/reusable-dashboards/spk-cards";
 import SpkDropdown from "@/shared/@spk-reusable-components/reusable-uielements/spk-dropdown";
 import SpkBreadcrumb from "@/shared/@spk-reusable-components/reusable-uielements/spk-breadcrumb";
 import Seo from "@/shared/layouts-components/seo/seo";
-import { Cardsdata} from "@/shared/data/dashboard/salesdata";
+import FirmStatsCards from "@/components/dashboard/FirmStatsCards";
 
 const MapContainer = dynamic(() => import("@/components/map/MapContainer"), {
   ssr: false,
@@ -79,57 +78,45 @@ const Sales = () => {
 
           <Row>
             <Col xl={8}>
-              <Row>
-                {Cardsdata.map((item, idx) => (
-                  <Col xxl={3} xl={6} key={idx}>
-                    <Spkcardscomponent
-                      cardClass="overflow-hidden main-content-card"
-                      headingClass="d-block mb-1"
-                      mainClass="d-flex align-items-start justify-content-between mb-2"
-                      Icon
-                      iconClass={item.iconClass}
-                      card={item}
-                      badgeClass="md rounded-pill"
-                      dataClass="mb-0"
-                    />
-                  </Col>
-                ))}
+              {/* NEW: dynamic firm-stats cards */}
+              {user && <FirmStatsCards firmId={user.firm_id} />}
 
-                <Col xxl={16} xl={12}>
-                  <Card className="custom-card">
-                    <Card.Header className="justify-content-between">
-                      <Card.Title>Firm Properties</Card.Title>
+              {/* --- Map stays exactly as before --- */}
+              <Col xxl={16} xl={12}>
+                <Card className="custom-card">
+                  <Card.Header className="justify-content-between">
+                    <Card.Title>Firm Properties</Card.Title>
 
-                      <SpkDropdown
-                        toggleas="a"
-                        Customtoggleclass="btn btn-sm btn-light text-muted"
-                        Toggletext={
-                          statusFilter === "all"
-                            ? "All Statuses"
-                            : `Status: ${statusFilter}`
-                        }
-                      >
-                        <Dropdown.Item onClick={() => setStatusFilter("all")}>
-                          All Statuses
+                    <SpkDropdown
+                      toggleas="a"
+                      Customtoggleclass="btn btn-sm btn-light text-muted"
+                      Toggletext={
+                        statusFilter === "all"
+                          ? "All Statuses"
+                          : `Status: ${statusFilter}`
+                      }
+                    >
+                      <Dropdown.Item onClick={() => setStatusFilter("all")}>
+                        All Statuses
+                      </Dropdown.Item>
+                      {STATUSES.map((s) => (
+                        <Dropdown.Item key={s} onClick={() => setStatusFilter(s)}>
+                          {s.charAt(0).toUpperCase() + s.slice(1)}
                         </Dropdown.Item>
-                        {STATUSES.map((s) => (
-                          <Dropdown.Item
-                            key={s}
-                            onClick={() => setStatusFilter(s)}
-                          >
-                            {s.charAt(0).toUpperCase() + s.slice(1)}
-                          </Dropdown.Item>
-                        ))}
-                      </SpkDropdown>
-                    </Card.Header>
+                      ))}
+                    </SpkDropdown>
+                  </Card.Header>
 
-                    <Card.Body>
-                      <MapContainer filters={{status: statusFilter}} savedOnly={true} />
-                    </Card.Body>
-                  </Card>
-                </Col>
-              </Row>
+                  <Card.Body>
+                    <MapContainer
+                      filters={{ status: statusFilter }}
+                      savedOnly={true}
+                    />
+                  </Card.Body>
+                </Card>
+              </Col>
             </Col>
+
 
             <Col xl={4}>
               <Row>
