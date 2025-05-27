@@ -216,6 +216,7 @@ export const getFirmPropertyByParcel: RequestHandler = async (req, res, next) =>
                fp.status,
                fp.asking_price,
                fp.sold_price,
+               fp.sold_date,
                fp.created_at,
                fp.updated_at,
                p.latitude,
@@ -263,7 +264,7 @@ export const updateFirmProperty: RequestHandler = async (req, res, next) => {
     }
 
     const { id } = req.params; // The firm_properties primary key
-    const { parcel_no, status, asking_price, sold_price } = req.body;
+    const { parcel_no, status, asking_price, sold_price, sold_date } = req.body;
 
     // If parcel_no isn't in the body, you can get it from the existing row,
     // but typically we expect the client to provide it for extra safety.
@@ -291,6 +292,12 @@ export const updateFirmProperty: RequestHandler = async (req, res, next) => {
     if (sold_price !== undefined) {
       updates.push(`sold_price = $${index}`);
       values.push(sold_price);
+      index++;
+    }
+
+    if (sold_date !== undefined) {
+      updates.push(`sold_date = $${index}`);
+      values.push(sold_date);
       index++;
     }
 

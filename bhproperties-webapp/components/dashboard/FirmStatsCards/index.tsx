@@ -106,7 +106,7 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
           (() => {
             const { pctStr, color, icon } = trendMeta(a.percentChange);
             return {
-              title: "Median Asking / ft²",
+              title: "Firm Median Asking / ft²",
               count: a.current ? numberFmt.format(a.current) : "—",
               inc: `Last ${a.periodDays} days`,
               percentageChange: pctStr,
@@ -120,7 +120,7 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
           (() => {
             const { pctStr, color, icon } = trendMeta(s.percentChange);
             return {
-              title: "Median Sold / ft²",
+              title: "Firm Median Sold / ft²",
               count: s.current ? numberFmt.format(s.current) : "—",
               inc: `Last ${s.periodDays} days`,
               percentageChange: pctStr,
