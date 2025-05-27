@@ -55,6 +55,54 @@ export const getMedianAskingPricePerSqFt = async (req: Request, res: Response) =
 };
 
 
+export const getVolumeSoldSeries = async (req: Request, res: Response) => {
+  const user = (req as AuthenticatedRequest).user;
+  if (!user) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  };
+
+  const firmId = Number(req.params.firmId ?? user.firm_id);
+
+  /* ---------------- parameters ---------------- */
+  const start = req.query.start as string | undefined;   // YYYY-MM-DD
+  const end   = req.query.end   as string | undefined;   // YYYY-MM-DD
+
+  // default range: last 24 months
+  const sqlRange = `
+    AND fp.sold_date >= COALESCE($2, NOW() - INTERVAL '24 months')
+    AND fp.sold_date <  COALESCE($3, NOW())
+  `;
+
+  /* ---------------- query ---------------- */
+  const sql = `
+    WITH periodized AS (
+      SELECT
+        date_trunc('month', sold_date)
+          - (EXTRACT(month FROM sold_date)::int % 3) * INTERVAL '1 month'
+            AS period_start,
+        sold_price
+      FROM   firm_properties fp
+      WHERE  fp.firm_id    = $1
+        AND  fp.status     = 'sold'
+        AND  fp.sold_price IS NOT NULL
+        AND  fp.sold_date  IS NOT NULL
+        ${sqlRange}
+    )
+    SELECT period_start::date,
+           SUM(sold_price)::numeric AS volume_bhd
+    FROM   periodized
+    GROUP  BY period_start
+    ORDER  BY period_start;
+  `;
+
+  const { rows } = await pool.query(sql, [firmId, start ?? null, end ?? null]);
+
+  /* shape for the frontend */
+  // [{period_start: '2024-01-01', volume_bhd: 250000}, …]
+  res.json({ periodDays: 90, series: rows });
+};
+
 export const getMedianSoldPricePerSqFt = async (req: Request, res: Response) => {
   const user = (req as AuthenticatedRequest).user;
   if (!user) {
