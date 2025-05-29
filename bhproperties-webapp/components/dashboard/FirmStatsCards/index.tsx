@@ -144,7 +144,7 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
       {/* header */}
       <Row className="d-flex align-items-center pt-3 px-2">
         <Card.Header className="p-0 border-0 bg-transparent">
-          <Card.Title className="">Monthly Insights</Card.Title>
+          <Card.Title className="">Firm Monthly Insights</Card.Title>
         </Card.Header>
 
         <Col xs="auto" className="ms-auto mb-2">
