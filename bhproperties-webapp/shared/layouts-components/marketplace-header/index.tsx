@@ -19,7 +19,7 @@ const MarketplaceHeader: React.FC = () => {
       <header className="app-header sticky border-bottom shadow-sm px-4 py-2">
         <div className="main-header-container d-flex align-items-center">
 
-          <Link href="/" className="header-logo d-flex align-items-center me-3">
+          <Link href="/marketplace" className="header-logo d-flex align-items-center me-3">
             <img
               height={34}
               alt="Logo"
