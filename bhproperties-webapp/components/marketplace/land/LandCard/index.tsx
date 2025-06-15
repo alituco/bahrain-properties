@@ -32,7 +32,7 @@ const LandCard: React.FC<{ land: Land }> = ({ land }) => {
 
 
   const fmtArea = `${Math.round(land.shape_area).toLocaleString()} m²`;
-  const href = `/land/${land.id}`;
+  const href = `/marketplace/land/${land.id}`;
 
   return (
     <Link href={href}>
