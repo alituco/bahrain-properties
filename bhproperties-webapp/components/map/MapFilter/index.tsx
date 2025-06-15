@@ -15,7 +15,6 @@ export interface MapFilters {
 interface Props {
   areas:         string[];
   governorates:  string[];
-  /** values to pre‑populate the inputs */
   values:        MapFilters;
   onApply:      (f: MapFilters) => void;
   onClear:      () => void;
@@ -28,14 +27,12 @@ const MapFilter: React.FC<Props> = ({
   onApply,
   onClear,
 }) => {
-  /* local controlled inputs – seeded from `values` --------------------- */
   const [block, setBlock] = useState(values.block ?? "");
   const [area,  setArea]  = useState(values.area  ?? "");
   const [gov,   setGov]   = useState(values.governorate ?? "");
   const [minS,  setMinS]  = useState(values.minSize ?? "");
   const [maxS,  setMaxS]  = useState(values.maxSize ?? "");
 
-  /* whenever parent opens modal with different defaults ---------------- */
   useEffect(() => {
     setBlock(values.block  ?? "");
     setArea (values.area   ?? "");
@@ -45,7 +42,7 @@ const MapFilter: React.FC<Props> = ({
   }, [values]);
 
   const primaryChosen = block || area || gov;
-  const applyDisabled = !primaryChosen;   //  min/max alone not allowed
+  const applyDisabled = !primaryChosen;   
 
   const handleApply = () =>
     onApply({ block, area, governorate: gov, minSize: minS, maxSize: maxS });
@@ -65,7 +62,6 @@ const MapFilter: React.FC<Props> = ({
       </Card.Header>
 
       <Card.Body>
-        {/* block --------------------------------------------------------- */}
         <Form.Group className="mb-3">
           <Form.Label className="fw-semibold">Block Number</Form.Label>
           <Form.Control
@@ -75,7 +71,6 @@ const MapFilter: React.FC<Props> = ({
           />
         </Form.Group>
 
-        {/* governorate --------------------------------------------------- */}
         <Form.Group className="mb-3">
           <Form.Label className="fw-semibold">Governorate</Form.Label>
           <Form.Select value={gov} onChange={(e) => setGov(e.target.value)}>
@@ -86,7 +81,6 @@ const MapFilter: React.FC<Props> = ({
           </Form.Select>
         </Form.Group>
 
-        {/* area ---------------------------------------------------------- */}
         <Form.Group className="mb-3">
           <Form.Label className="fw-semibold">Area</Form.Label>
           <Form.Select value={area} onChange={(e) => setArea(e.target.value)}>
@@ -97,7 +91,6 @@ const MapFilter: React.FC<Props> = ({
           </Form.Select>
         </Form.Group>
 
-        {/* size range ---------------------------------------------------- */}
         <Row className="g-2 mb-4">
           <Form.Label className="fw-semibold">Plot Size (m²)</Form.Label>
           <Col>

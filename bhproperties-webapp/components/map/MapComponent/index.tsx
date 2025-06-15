@@ -34,7 +34,6 @@ export default function MapComponent({
   const [hoverPos, setHoverPos] = useState<{ x:number; y:number } | null>(null);
   const [hover,    setHover]    = useState<{ status?:string; parcel?:string } | null>(null);
 
-  /* -------- build query string (includes sizes) -------- */
   const qs = () => {
     const p = new URLSearchParams();
     if (status && status !== "all") p.append("status", status);
@@ -46,7 +45,6 @@ export default function MapComponent({
     return p.toString();
   };
 
-  /* -------- fetch geojson ------------------------------ */
   const fetchGeo = async () => {
     const endpoint = savedOnly ? "firm-properties/geojson" : "coordinates";
     const { data } = await axios.get(`${API_URL}/${endpoint}?${qs()}`, { withCredentials:true });
@@ -56,7 +54,6 @@ export default function MapComponent({
     };
   };
 
-  /* -------- create / update map ------------------------ */
   const refresh = async () => {
     setLoading(true);
     const geo = await fetchGeo();
@@ -123,7 +120,6 @@ export default function MapComponent({
 
   useEffect(()=>{ refresh(); }, [status, block, area, governorate, minSize, maxSize, savedOnly]);
 
-  /* fly‑to */
   useEffect(()=>{
     if (flyTo && mapRef.current) {
       mapRef.current.flyTo({ center:[flyTo.lon, flyTo.lat], zoom:17, essential:true });

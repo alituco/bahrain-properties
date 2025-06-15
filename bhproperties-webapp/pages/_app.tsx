@@ -9,10 +9,12 @@ const poppins = Poppins({
 
 import ContentLayout from '@/shared/layouts-components/layout/content-layout';
 import Authenticationlayout from '@/shared/layouts-components/layout/authentication-layout';
+import BlankLayout from '@/shared/layouts-components/blank-layout';
 
 const layouts: Record<string, React.FC<any>> = {
   ContentLayout: ContentLayout,
   Authenticationlayout: Authenticationlayout,
+  BlankLayout: BlankLayout
 };
 
 function MyApp({ Component, pageProps }: any) {
