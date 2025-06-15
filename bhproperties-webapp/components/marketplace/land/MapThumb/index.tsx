@@ -1,6 +1,3 @@
-/* ------------------------------------------------------------------
-   LAND – read-only Mapbox thumbnail (no interaction)
-   -----------------------------------------------------------------*/
 'use client';
 
 import React, { useEffect, useRef } from 'react';
@@ -10,8 +7,8 @@ import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 
 interface Props {
-  parcelFeature: Feature<Geometry, GeoJsonProperties>;  // single polygon
-  center       : [number, number];                      // [lng , lat]
+  parcelFeature: Feature<Geometry, GeoJsonProperties>;  
+  center       : [number, number];                     
 }
 
 const MapThumb: React.FC<Props> = ({ parcelFeature, center }) => {
@@ -21,13 +18,12 @@ const MapThumb: React.FC<Props> = ({ parcelFeature, center }) => {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    /* ── create map (once per mount) ────────────────────────────── */
     mapRef.current = new mapboxgl.Map({
       container: containerRef.current,
       style:     'mapbox://styles/mapbox/streets-v11',
       center,
       zoom:      17,
-      interactive: false,          // ◄ no pan / zoom / scroll
+      interactive: false,          
       attributionControl: false,
     });
 
@@ -58,7 +54,6 @@ const MapThumb: React.FC<Props> = ({ parcelFeature, center }) => {
       });
     });
 
-    /* cleanup on unmount */
     return () => mapRef.current?.remove();
   }, [parcelFeature, center]);
 

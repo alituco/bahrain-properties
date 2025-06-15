@@ -1,10 +1,9 @@
-// pages/firm-properties.tsx
-"use client";
+'use client';
 
-import React, { Fragment, useEffect, useState, useRef } from "react";
-import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useRouter } from "next/router";
+import React, { Fragment, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/router';
 import {
   Card,
   Col,
@@ -12,18 +11,18 @@ import {
   Row,
   Spinner,
   Button as BsButton,
-} from "react-bootstrap";
-import Image from "next/image";
-import Swal from "sweetalert2";
-import Seo from "@/shared/layouts-components/seo/seo";
-import SpkBreadcrumb from "@/shared/@spk-reusable-components/reusable-uielements/spk-breadcrumb";
-import SpkPopovers from "@/shared/@spk-reusable-components/reusable-uielements/spk-popovers";
-import SpkTablescomponent from "@/shared/@spk-reusable-components/reusable-tables/tables-component";
-import SpkButton from "@/shared/@spk-reusable-components/reusable-uielements/spk-button";
-import SpkAlert from "@/shared/@spk-reusable-components/reusable-uielements/spk-alert";
-import FirmPropertyFilter from "@/components/FirmPropertyFilter";
+} from 'react-bootstrap';
+import Image from 'next/image';
+import Swal from 'sweetalert2';
+import Seo from '@/shared/layouts-components/seo/seo';
+import SpkBreadcrumb from '@/shared/@spk-reusable-components/reusable-uielements/spk-breadcrumb';
+import SpkPopovers from '@/shared/@spk-reusable-components/reusable-uielements/spk-popovers';
+import SpkTablescomponent from '@/shared/@spk-reusable-components/reusable-tables/tables-component';
+import SpkButton from '@/shared/@spk-reusable-components/reusable-uielements/spk-button';
+import SpkAlert from '@/shared/@spk-reusable-components/reusable-uielements/spk-alert';
+import FirmPropertyFilter from '@/components/FirmPropertyFilter';
 
-const MapContainer = dynamic(() => import("@/components/map/MapContainer"), {
+const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
 });
 
@@ -46,58 +45,58 @@ interface UserProfile {
 export default function FirmPropertiesPage() {
   const router = useRouter();
   const API = process.env.NEXT_PUBLIC_API_URL!;
-
   const [rows, setRows] = useState<FirmProperty[]>([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; variant: string } | null>(
-    null
+    null,
   );
   const [busyId, setBusyId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [areas, setAreas] = useState<string[]>([]);
   const [showFilter, setShowFilter] = useState(false);
-
   const [flyTo, setFlyTo] = useState<{ lat: number; lon: number } | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
 
   const mapSectionRef = useRef<HTMLDivElement>(null);
-  const statusFilter = filters.status ?? "all";
+  const statusFilter = filters.status ?? 'all';
 
-  function smoothScrollTo(el: HTMLElement, duration = 800, offsetPx = 100) {
+  const smoothScrollTo = (
+    el: HTMLElement,
+    duration = 800,
+    offsetPx = 100,
+  ) => {
     const startY = window.scrollY;
-    const targetY =
-      el.getBoundingClientRect().top + startY - offsetPx;
+    const targetY = el.getBoundingClientRect().top + startY - offsetPx;
     const distance = targetY - startY;
     let startTime: number | null = null;
-    function step(timestamp: number) {
-      if (startTime === null) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      window.scrollTo(0, startY + distance * progress);
-      if (elapsed < duration) {
-        window.requestAnimationFrame(step);
-      }
-    }
+    const step = (ts: number) => {
+      if (startTime === null) startTime = ts;
+      const elapsed = ts - startTime;
+      const prog = Math.min(elapsed / duration, 1);
+      window.scrollTo(0, startY + distance * prog);
+      if (elapsed < duration) window.requestAnimationFrame(step);
+    };
     window.requestAnimationFrame(step);
-  }
+  };
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API}/user/me`, { credentials: "include" });
-        if (!res.ok) throw new Error("Profile failed");
+        const res = await fetch(`${API}/user/me`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Profile failed');
         const { user }: { user: UserProfile } = await res.json();
-        setIsAdmin(user.role.toLowerCase() === "admin");
+        setIsAdmin(user.role.toLowerCase() === 'admin');
       } catch {
-        router.replace("/");
+        router.replace('/');
       }
     })();
   }, [API, router]);
 
   const loadAreas = async () => {
     const res = await fetch(`${API}/propertyFilters/areas`, {
-      credentials: "include",
+      credentials: 'include',
     });
     const { areaNames } = await res.json();
     setAreas(areaNames);
@@ -106,20 +105,22 @@ export default function FirmPropertiesPage() {
   const loadRows = async (f: Record<string, string> = {}) => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (f.block) params.append("block_no", f.block);
-      if (f.area) params.append("area_namee", f.area);
-      if (f.status) params.append("status", f.status);
-      if (f.minPrice) params.append("minPrice", f.minPrice);
-      if (f.maxPrice) params.append("maxPrice", f.maxPrice);
-
-      const url = `${API}/firm-properties?${params.toString()}`;
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Fetch failed");
+      const qs = new URLSearchParams();
+      if (f.block) qs.append('block_no', f.block);
+      if (f.area) qs.append('area_namee', f.area);
+      if (f.status) qs.append('status', f.status);
+      if (f.minPrice) qs.append('minPrice', f.minPrice);
+      if (f.maxPrice) qs.append('maxPrice', f.maxPrice);
+      const res = await fetch(
+        `${API}/firm-properties?${qs.toString()}`,
+        { credentials: 'include' },
+      );
+      if (!res.ok) throw new Error('Fetch failed');
       const { firmProperties } = await res.json();
       setRows(firmProperties);
-    } catch (err: any) {
-      setFetchError(err.message);
+      setPage(1);
+    } catch (e: any) {
+      setFetchError(e.message);
     } finally {
       setLoading(false);
     }
@@ -130,24 +131,35 @@ export default function FirmPropertiesPage() {
     loadRows();
   }, [API]);
 
+  const applyFilters = (f: Record<string, string>) => {
+    setFilters(f);
+    setShowFilter(false);
+    loadRows(f);
+  };
+
+  const clearFilters = () => {
+    setFilters({});
+    loadRows({});
+  };
+
   const askDelete = (row: FirmProperty) => {
     if (!isAdmin) {
       Swal.fire({
-        icon: "error",
-        title: "Admins only",
-        text: "You need to be admin to delete.",
-        confirmButtonColor: "#d33",
+        icon: 'error',
+        title: 'Admins only',
+        text: 'You need to be admin to delete.',
+        confirmButtonColor: '#d33',
       });
       return;
     }
     Swal.fire({
-      title: `Are you sure you want to delete this property?`,
-      text: "This action cannot be undone.",
-      icon: "warning",
+      title: 'Are you sure you want to delete this property?',
+      text: 'This action cannot be undone.',
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: "Yes, delete",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#d33",
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#d33',
     }).then((r) => {
       if (r.isConfirmed) performDelete(row);
     });
@@ -157,41 +169,39 @@ export default function FirmPropertiesPage() {
     setBusyId(row.id);
     try {
       const res = await fetch(`${API}/firm-properties/${row.id}`, {
-        method: "DELETE",
-        credentials: "include",
+        method: 'DELETE',
+        credentials: 'include',
       });
-      if (!res.ok) throw new Error("Delete failed");
+      if (!res.ok) throw new Error('Delete failed');
       setRows((prev) => prev.filter((p) => p.id !== row.id));
-      setToast({ text: "Property deleted", variant: "success" });
-    } catch (err: any) {
-      setToast({ text: err.message || "Could not delete", variant: "danger" });
+      setToast({ text: 'Property deleted', variant: 'success' });
+      setPage(1);
+    } catch (e: any) {
+      setToast({ text: e.message || 'Could not delete', variant: 'danger' });
     } finally {
       setBusyId(null);
     }
-  }; 
-
-  const applyFilters = (f: Record<string, string>) => {
-    setFilters(f);
-    setShowFilter(false);
-    loadRows(f);
   };
 
-  const navigateToProperty = (row: FirmProperty) => {
-    router.push(`/property/${row.parcel_no}`);
-  };
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(rows.length / rowsPerPage) || 1;
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = rows.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage,
+  );
 
-  const clearFilters = () => {
-    setFilters({});
-    loadRows({});
-  };
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [totalPages, page]);
 
   useEffect(() => {
     if (flyTo && mapSectionRef.current) {
-      smoothScrollTo(mapSectionRef.current, 1000, 120);
+      smoothScrollTo(mapSectionRef.current, 800, 120);
     }
   }, [flyTo]);
 
-  if (loading) {
+  if (loading)
     return (
       <div className="d-flex justify-content-center align-items-center vh-100">
         <Image
@@ -203,7 +213,6 @@ export default function FirmPropertiesPage() {
         />
       </div>
     );
-  }
 
   return (
     <Fragment>
@@ -217,12 +226,11 @@ export default function FirmPropertiesPage() {
             </li>
             <li className="breadcrumb-item active">Firm Properties</li>
           </SpkBreadcrumb>
-          <h1 className="page-title fw-medium fs-18 mb-0">Firm Properties</h1>
+          <h1 className="page-title fw-medium fs-18 mb-0">Firm Properties</h1>
         </div>
         <Col className="text-end">
           <BsButton variant="primary" onClick={() => setShowFilter(true)}>
-            <i className="ri-filter-3-line me-1" />
-            Filter
+            <i className="ri-filter-3-line me-1" /> Filter
           </BsButton>
         </Col>
       </div>
@@ -281,21 +289,24 @@ export default function FirmPropertiesPage() {
                   tableClass="text-nowrap table-bordered"
                   showCheckbox={false}
                   header={[
-                    { title: " Property ID" },
-                    { title: "Area" },
-                    { title: "Block" },
-                    { title: "Status" },
-                    { title: "Asking Price" },
-                    { title: "Updated" },
-                    { title: "Action" },
+                    { title: 'ID' },
+                    { title: 'Area' },
+                    { title: 'Block' },
+                    { title: 'Status' },
+                    { title: 'Asking Price' },
+                    { title: 'Updated' },
+                    { title: 'Action' },
                   ]}
                 >
-                  {rows.map((row) => (
+                  {pageRows.map((row) => (
                     <tr key={row.id}>
-                      <td> 
-                        <Link href={`/property/${row.parcel_no}`} className="text-blue hover:underline"> 
+                      <td>
+                        <Link
+                          href={`/property/${row.parcel_no}`}
+                          className="text-blue hover:underline"
+                        >
                           {row.id}
-                        </Link> 
+                        </Link>
                       </td>
                       <td>{row.area_namee}</td>
                       <td>{row.block_no}</td>
@@ -306,19 +317,20 @@ export default function FirmPropertiesPage() {
                       </td>
                       <td>
                         {row.asking_price != null
-                          ? `${row.asking_price.toLocaleString()} BHD`
-                          : "--"}
+                          ? `${row.asking_price.toLocaleString()} BHD`
+                          : '--'}
                       </td>
-                      <td>
-                        {new Date(row.updated_at).toLocaleDateString()}
-                      </td>
+                      <td>{new Date(row.updated_at).toLocaleDateString()}</td>
                       <td>
                         <div className="hstack gap-2 fs-15">
                           <SpkButton
                             Size="sm"
                             Buttonvariant="primary-light"
                             onClickfunc={() =>
-                              setFlyTo({ lat: row.latitude, lon: row.longitude })
+                              setFlyTo({
+                                lat: row.latitude,
+                                lon: row.longitude,
+                              })
                             }
                           >
                             <i className="ri-focus-3-line" />
@@ -333,7 +345,7 @@ export default function FirmPropertiesPage() {
                               <SpkButton
                                 Size="sm"
                                 Buttonvariant={
-                                  isAdmin ? "danger" : "secondary-light"
+                                  isAdmin ? 'danger' : 'secondary-light'
                                 }
                                 Disabled={busyId === row.id || !isAdmin}
                                 onClickfunc={() => askDelete(row)}
@@ -355,6 +367,45 @@ export default function FirmPropertiesPage() {
                   ))}
                 </SpkTablescomponent>
               </div>
+
+              {totalPages > 1 && (
+                <nav className="mt-3">
+                  <ul className="pagination justify-content-center mb-0">
+                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                      <button
+                        className="page-link"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      >
+                        « Prev
+                      </button>
+                    </li>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <li
+                        key={p}
+                        className={`page-item ${p === currentPage ? 'active' : ''}`}
+                      >
+                        <button className="page-link" onClick={() => setPage(p)}>
+                          {p}
+                        </button>
+                      </li>
+                    ))}
+                    <li
+                      className={`page-item ${
+                        currentPage === totalPages ? 'disabled' : ''
+                      }`}
+                    >
+                      <button
+                        className="page-link"
+                        onClick={() =>
+                          setPage((p) => Math.min(totalPages, p + 1))
+                        }
+                      >
+                        Next »
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              )}
             </Card.Body>
           </Card>
         </Col>
@@ -371,7 +422,7 @@ export default function FirmPropertiesPage() {
                 <MapContainer
                   filters={{ status: statusFilter }}
                   flyTo={flyTo}
-                  savedOnly={true}
+                  savedOnly
                 />
               </Card.Body>
             </Card>
@@ -382,4 +433,4 @@ export default function FirmPropertiesPage() {
   );
 }
 
-FirmPropertiesPage.layout = "ContentLayout";
+FirmPropertiesPage.layout = 'ContentLayout';

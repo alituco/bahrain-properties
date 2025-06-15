@@ -77,11 +77,9 @@ const Sales = () => {
           </div>
 
           <Row>
-            <Col xl={8}>
-              {/* NEW: dynamic firm-stats cards */}
+            <Col xl={11}>
               {user && <FirmStatsCards firmId={user.firm_id} />}
 
-              {/* --- Map stays exactly as before --- */}
               <Col xxl={16} xl={12}>
                 <Card className="custom-card">
                   <Card.Header className="justify-content-between">
@@ -120,44 +118,7 @@ const Sales = () => {
 
             <Col xl={4}>
               <Row>
-                <Col xl={12}>
-                  <Card className="custom-card main-dashboard-banner overflow-hidden">
-                    <Card.Body className="p-4">
-                      <div className="row justify-content-between">
-                        <Col xxl={7} xl={5} lg={5} md={5} sm={5}>
-                          <h4 className="mb-3 fw-medium text-fixed-white">
-                            Upgrade to get more
-                          </h4>
-                          <p className="mb-4 text-fixed-white">
-                            Stay ahead of the market. Optimize performance. View
-                            advanced insights. Achieve success with Platinum.
-                          </p>
-                          <Link
-                            href="#!"
-                            className="fw-medium text-fixed-white text-decoration-underline"
-                          >
-                            Upgrade To Platinum
-                            <i className="ti ti-arrow-narrow-right"></i>
-                          </Link>
-                        </Col>
-                        <Col
-                          xxl={4}
-                          xl={7}
-                          lg={7}
-                          md={7}
-                          sm={7}
-                          className="d-sm-block d-none text-end my-auto"
-                        >
-                          <img
-                            src="/assets/images/media/media-86.png"
-                            alt=""
-                            className="img-fluid"
-                          />
-                        </Col>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                </Col>
+
               </Row>
             </Col>
           </Row>

@@ -1,6 +1,3 @@
-/* ------------------------------------------------------------------
-   LAND – filter bar (instant-apply, with conditional “Clear” button)
-   -----------------------------------------------------------------*/
 'use client';
 
 import React, { useState } from 'react';
@@ -18,7 +15,6 @@ type Props = {
 };
 
 const FilterBar: React.FC<Props> = ({ options, onApply }) => {
-  /* local filter state */
   const [nzp , setNzp ] = useState('');
   const [gov , setGov ] = useState('');
   const [loc , setLoc ] = useState('');
@@ -26,13 +22,11 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
   const [minA, setMinA] = useState('');
   const [maxA, setMaxA] = useState('');
 
-  /* build + push filters every time something changes ------------- */
   const push = (
     next: Partial<Record<'nzp'|'gov'|'loc'|'sort'|'minA'|'maxA', string>>
   ) => {
     const state = { nzp, gov, loc, sort, minA, maxA, ...next };
 
-    // update local state
     if ('nzp'  in next) setNzp(next.nzp!);
     if ('gov'  in next) setGov(next.gov!);
     if ('loc'  in next) setLoc(next.loc!);
@@ -40,7 +34,6 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
     if ('minA' in next) setMinA(next.minA!);
     if ('maxA' in next) setMaxA(next.maxA!);
 
-    // build query object
     const f: Record<string,string> = { status:'listed' };
     if (state.nzp ) f.nzp_code    = state.nzp;
     if (state.gov ) f.governorate = state.gov;
@@ -52,7 +45,6 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
     onApply(f);
   };
 
-  /* clear all ----------------------------------------------------- */
   const clear = () => {
     setNzp(''); setGov(''); setLoc(''); setSort(''); setMinA(''); setMaxA('');
     onApply({ status:'listed' });

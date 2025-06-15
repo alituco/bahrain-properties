@@ -17,7 +17,6 @@ const Hero: React.FC<Props> = ({ onFilterClick }) => (
 
     </Container>
 
-    {/* --- background styling --- */}
     <style jsx>{`
       .land-hero {
         position: relative;

@@ -23,7 +23,6 @@ type PipelineResp = {
 
 interface Props { firmId: number }
 
-/* ---------- helpers ---------- */
 const fmtMoney = new Intl.NumberFormat("en-US", {
   style: "currency", currency: "BHD", minimumFractionDigits: 0,
 });
@@ -40,7 +39,6 @@ const trendMeta = (pct: number | null) => {
 
 const safeJson = async <T,>(r: Response): Promise<T | null> => (r.ok ? r.json() : null);
 
-/* =================================================================== */
 const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
   const [loading, setLoading] = useState(true);
   const [cards,   setCards]   = useState<any[]>([]);
@@ -59,7 +57,6 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
         ]);
         if (cancelled) return;
 
-        /* ---- derive volume summary from series ---- */
         const series = volume?.series ?? [];
         const L      = series.length;
         const vSum: SummaryResp = L
@@ -77,9 +74,7 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
         const listed  = p["listed"] as { current: number; percentChange: number | null } | undefined;
         const soldCnt = p["sold"]   as { current: number; percentChange: number | null } | undefined;
 
-        /* ---------- build dashboard cards ---------- */
         const cardsArr = [
-          // total volume
           (() => {
             const { pctStr, color, icon } = trendMeta(vSum.percentChange);
             return {
@@ -90,7 +85,6 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
               backgroundColor: "primary", iconClass: "ti ti-cash",
             };
           })(),
-          // median sold / ft²
           (() => {
             const { pctStr, color, icon } = trendMeta(s.percentChange);
             return {
@@ -101,7 +95,6 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
               backgroundColor: "info", iconClass: "ti ti-home-dollar",
             };
           })(),
-          // listed count
           (() => {
             const { pctStr, color, icon } = trendMeta(listed?.percentChange ?? null);
             return {
@@ -112,7 +105,6 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
               backgroundColor: "warning", iconClass: "ti ti-map-pin",
             };
           })(),
-          // sold count
           (() => {
             const { pctStr, color, icon } = trendMeta(soldCnt?.percentChange ?? null);
             return {
@@ -133,15 +125,12 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
     return () => { cancelled = true };
   }, [firmId]);
 
-  /* ---------- loader ---------- */
   if (loading) return (
     <Row className="mb-3"><Col className="text-center"><Spinner animation="border" /></Col></Row>
   );
 
-  /* ---------- render ---------- */
   return (
     <Col className="border border-1 border-body-tertiary rounded px-3 mb-3">
-      {/* header */}
       <Row className="d-flex align-items-center pt-3 px-2">
         <Card.Header className="p-0 border-0 bg-transparent">
           <Card.Title className="">Monthly Insights</Card.Title>
@@ -158,7 +147,6 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
         </Col>
       </Row>
 
-      {/* metric tiles */}
       <Row className="">
         {cards.map((card, idx) => (
           <Col xxl={3} xl={6} key={idx}>

@@ -84,3 +84,52 @@ export const getListedLand: RequestHandler = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getLandById: RequestHandler = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const sql = `
+      SELECT
+        fp.id,
+        fp.title,
+        fp.description,
+        fp.asking_price,
+        fp.status,
+
+        /* ── parcel geometry & meta ───────────────────────────── */
+        p.longitude,
+        p.latitude,
+        p.shape_area,
+        p.nzp_code,
+        p.area_namee,
+        p.block_no,
+        ST_AsGeoJSON(ST_Transform(p.geometry, 4326)) AS geojson,
+
+        /* ── contact details ──────────────────────────────────── */
+        CONCAT(u.first_name, ' ', u.last_name)            AS realtor_name,
+        u.phone_number,
+        u.email,
+        COALESCE(f.firm_name, u.real_estate_firm, '')     AS firm_name
+
+      FROM firm_properties fp
+      LEFT JOIN properties    p ON p.parcel_no = fp.parcel_no
+      LEFT JOIN users         u ON u.user_id   = fp.user_id
+      LEFT JOIN firms         f ON f.firm_id   = u.firm_id
+      WHERE fp.id = $1
+        AND fp.property_type = 'land';
+    `;
+
+    const { rows } = await pool.query(sql, [id]);
+
+    if (!rows.length) {
+      res.status(404).json({ message: 'Not found' });
+      return;
+    }
+
+    /* everything is already in the single row; just send it back */
+    res.json({ land: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};

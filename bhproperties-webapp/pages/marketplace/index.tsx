@@ -1,88 +1,130 @@
-/* ------------------------------------------------------------------
-   Marketplace landing page
-   ----------------------------------------------------------------- */
 "use client";
 
-import { Fragment, useState } from "react";
-import { Row, Col, Card, Button, Form, Pagination } from "react-bootstrap";
+import { Fragment, useEffect, useState } from "react";
+import { Row, Col, Card, Button, Form } from "react-bootstrap";
+import Image from "next/image";
 import Seo from "@/shared/layouts-components/seo/seo";
-import SpkProducts from "@/shared/@spk-reusable-components/reusable-apps/spk-products";
-
 import HeroSearch from "@/components/marketplace/HeroSearch";
+import LandCard, { Land } from "@/components/marketplace/land/LandCard";
 import { PageWithLayout } from "@/types/PageWithLayout";
 
-/* -------------------------------------------------  stub data ---- */
-const featuredJson = [
-  { id: 101, name: "Seaview Villa • Amwaj", price: 215_000 },
-  { id: 102, name: "High-floor Apartment • Seef", price: 138_000 },
-  { id: 103, name: "Corner Plot • Diyar Al Muharraq", price:  95_000 },
-];
+const API = process.env.NEXT_PUBLIC_API_URL!;
 
-const latestJson = [
-  { id: 1, name: "Villa in Juffair",  price: 120_000 },
-  { id: 2, name: "Apartment in Seef", price:  85_000 },
-];
-
-/* ------------------------------------------------------------------ */
 const Marketplace: PageWithLayout = () => {
-  const [featured] = useState(featuredJson);
-  const [latest  ] = useState(latestJson);
+  const [lands, setLands] = useState<Land[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [index, setIndex] = useState(0);
+  const [anim, setAnim] = useState<"" | "left" | "right">("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(
+          `${API}/land?status=listed&sort=desc&limit=5`,
+          { credentials: "include" }
+        );
+        const { land } = await r.json();
+        setLands(land.slice(0, 5));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const next = () => {
+    if (!lands.length) return;
+    setAnim("right");
+    setIndex((i) => (i + 1) % lands.length);
+  };
+
+  const prev = () => {
+    if (!lands.length) return;
+    setAnim("left");
+    setIndex((i) => (i - 1 + lands.length) % lands.length);
+  };
+
+  const visible =
+    lands.length >= 3
+      ? [...lands, ...lands].slice(index, index + 3)
+      : lands;
 
   return (
     <Fragment>
       <Seo title="Marketplace" />
 
-      {/* ─────────────  HERO  ───────────── */}
       <HeroSearch />
 
-      {/* ─────────────  FEATURED  ───────────── */}
       <section className="container my-5">
-        <h2 className="fw-semibold mb-4 text-primary">Featured Properties</h2>
-        <Row className="g-3">
-          {featured.map(p => (
-            <Col key={p.id} lg={4} md={6}>
-              <SpkProducts card={p} shoBadge idx="#" />
-            </Col>
-          ))}
-        </Row>
+        <h2 className="fw-semibold mb-4">Featured Properties</h2>
+
+        {loading ? (
+          <div
+            className="d-flex justify-content-center align-items-center"
+            style={{ minHeight: 200 }}
+          >
+            <Image
+              src="/assets/images/media/loader.svg"
+              width={64}
+              height={64}
+              alt="Loading…"
+              priority
+            />
+          </div>
+        ) : (
+          <div className="position-relative">
+            <div key={index} className={`animate-${anim}`}>
+              <Row className="g-3">
+                {visible.map((p) => (
+                  <Col key={p.id} lg={4} md={6}>
+                    <LandCard land={p} />
+                  </Col>
+                ))}
+              </Row>
+            </div>
+
+            {lands.length > 3 && (
+              <>
+                <Button
+                  variant="light"
+                  className="carousel-btn position-absolute top-50 start-0 translate-middle-y"
+                  onClick={prev}
+                >
+                  ‹
+                </Button>
+                <Button
+                  variant="light"
+                  className="carousel-btn position-absolute top-50 end-0 translate-middle-y"
+                  onClick={next}
+                >
+                  ›
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </section>
 
-
-      {/* ─────────────  CALL-TO-ACTION  ───────────── */}
       <section className="py-5 cta-bg text-white">
         <div className="container">
           <Row className="align-items-center gy-4">
             <Col lg={6}>
               <h2 className="fw-bold mb-3">Are you a Real-Estate Professional?</h2>
               <p className="lead mb-0">
-                Join <span className="text-warning fw-semibold">PMS Bahrain</span> – Bahrain’s
-                dedicated property platform – and showcase your listings directly
-                to thousands of buyers &amp; investors every day.
+                Join <span className="text-warning fw-semibold">PMS Bahrain</span>{" "}
+                and showcase your listings to thousands of buyers &amp; investors every day.
               </p>
             </Col>
-
-            {/* interest form – inline, super-simple */}
             <Col lg={6}>
               <Card className="shadow border-0">
                 <Card.Body className="p-4">
-                  <h5 className="fw-semibold mb-3 text-secondary">
-                    Get started – it’s free
-                  </h5>
+                  <h5 className="fw-semibold mb-3 text-secondary">Get started – it’s free</h5>
                   <Form>
                     <Row className="g-2">
-                      <Col md={6}>
-                        <Form.Control placeholder="Name*"        required />
-                      </Col>
-                      <Col md={6}>
-                        <Form.Control type="email" placeholder="Email*" required />
-                      </Col>
-                      <Col xs={12}>
-                        <Form.Control placeholder="Company / Brokerage" />
-                      </Col>
+                      <Col md={6}><Form.Control placeholder="Name*" required /></Col>
+                      <Col md={6}><Form.Control type="email" placeholder="Email*" required /></Col>
+                      <Col xs={12}><Form.Control placeholder="Company / Brokerage" /></Col>
                       <Col xs={12} className="d-grid mt-2">
-                        <Button variant="primary" type="submit">
-                          Request Agent Access
-                        </Button>
+                        <Button variant="primary" type="submit">Request Agent Access</Button>
                       </Col>
                     </Row>
                   </Form>
@@ -93,17 +135,46 @@ const Marketplace: PageWithLayout = () => {
         </div>
       </section>
 
-      {/* ─────────────  styles  ───────────── */}
       <style jsx>{`
-        .cta-bg{
-          background: var(--bs-primary);
-          background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-secondary) 100%);
+        .cta-bg {
+          background: linear-gradient(
+            135deg,
+            var(--bs-primary) 0%,
+            var(--bs-secondary) 100%
+          );
+        }
+        .carousel-btn {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          font-size: 22px;
+          padding: 0;
+          z-index: 5;
+        }
+        .animate-right,
+        .animate-left {
+          animation-duration: 0.4s;
+          animation-timing-function: ease-in-out;
+          animation-fill-mode: both;
+        }
+        .animate-right {
+          animation-name: slide-right;
+        }
+        .animate-left {
+          animation-name: slide-left;
+        }
+        @keyframes slide-right {
+          from { opacity: 0; transform: translateX(60px); }
+          to   { opacity: 1; transform: translateX(0);    }
+        }
+        @keyframes slide-left {
+          from { opacity: 0; transform: translateX(-60px); }
+          to   { opacity: 1; transform: translateX(0);     }
         }
       `}</style>
     </Fragment>
   );
 };
 
-/* no sidebar / main header */
 Marketplace.layout = "BlankLayout";
 export default Marketplace;
