@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { rest } from 'msw';
 
 import { server } from '../../../test/testServer';
-import Profile from '@/pages/profile'; 
+import Profile from '@/pages/dashboard/profile'; 
 
 const API = process.env.NEXT_PUBLIC_API_URL!;
 const user = userEvent.setup();
