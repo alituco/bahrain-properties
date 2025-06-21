@@ -14,6 +14,7 @@ import firmPropertiesRouter from './routes/firmProperties.controller';
 import propertyFiltersRoutes from './routes/propertyFilters.routes';
 import firmSpecificDataRoutes from './routes/firmSpecificData.routes';
 import listedLandRoutes from './routes/marketplace/land.routes';
+import residentialRoutes from './routes/residential/residential.routes'
 
 const app = express();
 
@@ -44,7 +45,7 @@ app.use('/firm-properties', firmPropertiesRouter);
 app.use('/propertyFilters', propertyFiltersRoutes);
 app.use('/firmSpecificData', firmSpecificDataRoutes);
 app.use('/land', listedLandRoutes);
-
+app.use('/residential', residentialRoutes);
 
 app.listen(Number(config.port), '0.0.0.0', () => {
   console.log(`Server running on port ${config.port}`);
