@@ -1,6 +1,3 @@
-/* ------------------------------------------------------------------
-   src/controllers/firmProperty.controller.ts
-   ----------------------------------------------------------------- */
 import { RequestHandler } from "express";
 import { pool }            from "../config/db";
 import { AuthenticatedRequest } from "../types/AuthenticatedRequest";
@@ -58,6 +55,8 @@ export const getFirmPropertiesGeojson: RequestHandler = async (req, res, next) =
         FROM firm_properties fp
    LEFT JOIN properties p ON fp.parcel_no = p.parcel_no
        WHERE fp.firm_id = $1
+       AND fp.property_type = 'land'
+
     `;
     const params: any[] = [user.firm_id];
 
@@ -174,6 +173,7 @@ export const getFirmProperties: RequestHandler = async (req, res, next) => {
         FROM firm_properties fp
    LEFT JOIN properties p ON fp.parcel_no = p.parcel_no
        WHERE fp.firm_id = $1
+       AND fp.property_type = 'land'
     `;
     const params: any[] = [user.firm_id];
 

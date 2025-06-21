@@ -90,7 +90,7 @@ export default function MapComponent({
 
         mapRef.current!.on("click", "poly", e=>{
           const parcel = e.features?.[0]?.properties?.parcel_no;
-          if (parcel) window.open(`/property/${parcel}`,"_self");
+          if (parcel) window.open(`/dashboard/property/${parcel}`,"_self");
         });
 
         mapRef.current!.on("mousemove","poly",e=>{

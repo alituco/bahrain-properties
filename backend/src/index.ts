@@ -13,7 +13,10 @@ import propertyNotesRoutes from './routes/propertyNotes.routes';
 import firmPropertiesRouter from './routes/firmProperties.controller';
 import propertyFiltersRoutes from './routes/propertyFilters.routes';
 import firmSpecificDataRoutes from './routes/firmSpecificData.routes';
+import apartmentRoutes from './routes/apartment/apartment.routes'
+
 import listedLandRoutes from './routes/marketplace/land.routes';
+import apartmentMarketplaceRoutes from './routes/marketplace/apartments.routes'
 
 const app = express();
 
@@ -43,7 +46,10 @@ app.use('/property-notes', propertyNotesRoutes);
 app.use('/firm-properties', firmPropertiesRouter);
 app.use('/propertyFilters', propertyFiltersRoutes);
 app.use('/firmSpecificData', firmSpecificDataRoutes);
+app.use('/apartment', apartmentRoutes);
+
 app.use('/land', listedLandRoutes);
+app.use('/marketplace/apartments', apartmentMarketplaceRoutes)
 
 
 app.listen(Number(config.port), '0.0.0.0', () => {

@@ -80,6 +80,7 @@ export default function LandDetailPage() {
             <div style={{}}>
               <MapDisplay
                 parcelFeature={geo}
+                showMarker={false}
                 center={[land.longitude, land.latitude]}
                 movable={false}
               />
@@ -141,6 +142,7 @@ export default function LandDetailPage() {
         <h4 className="fw-semibold mt-5 mb-3">Location</h4>
         <MapDisplay
           parcelFeature={geo}
+          showMarker={false}
           center={[land.longitude, land.latitude]}
           heightPx={400}
         />

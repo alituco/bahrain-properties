@@ -26,15 +26,22 @@ export const MENUITEMS: any = [
     ]
   },
   {
-    title: "Properties", icon: PropertyIcon, type: "sub", active: false, children: [
-      { path: "/saved-properties", type: "link", active: false, selected: false, title: "My Properties" },
-      { path: "/map", type: "link", active: false, selected: false, title: "Property Mappings" },
-      { path: "/some-link", type: "link", active: false, selected: false, title: "Property Listings" },
+    title: "Land Plots", icon: PropertyIcon, type: "sub", active: false, children: [
+      { path: "/dashboard/saved-properties", type: "link", active: false, selected: false, title: "Land Plots" },
+      { path: "/dashboard/map", type: "link", active: false, selected: false, title: "Land Mappings" },
+      { path: "/dashboard/active-land-listings", type: "link", active: false, selected: false, title: "Active Listings" },
+    ]
+  },
+  {
+    title: "Apartments", icon: PropertyIcon, type: "sub", active: false, children: [
+      { path: "/dashboard/apartment/apartment-properties", type: "link", active: false, selected: false, title: "Apartment Properties" },
+      { path: "/dashboard/apartment/add-apartment-property", type: "link", active: false, selected: false, title: "Add an Apartment Property" },
+      { path: "/dashboard/active-apartment-listings", type: "link", active: false, selected: false, title: "Active Listings" },
     ]
   },
   {
     title: "Realtors", icon: MembersIcon, type: "sub", active: false, children: [
-      { path: "/realtors", type: "link", active: false, selected: false, title: "View Realtors" },
+      { path: "/dashboard/realtors", type: "link", active: false, selected: false, title: "View Realtors" },
     ]
   },
 
