@@ -33,10 +33,10 @@ export const MENUITEMS: any = [
     ]
   },
   {
-    title: "Residential", icon: PropertyIcon, type: "sub", active: false, children: [
-      { path: "/dashboard/residential/residential-properties", type: "link", active: false, selected: false, title: "Residential Properties" },
-      { path: "/dashboard/residential/add-residential-property", type: "link", active: false, selected: false, title: "Add a Residential Property" },
-      { path: "/dashboard/active-residential-listings", type: "link", active: false, selected: false, title: "Active Listings" },
+    title: "Apartments", icon: PropertyIcon, type: "sub", active: false, children: [
+      { path: "/dashboard/apartment/apartment-properties", type: "link", active: false, selected: false, title: "Apartment Properties" },
+      { path: "/dashboard/apartment/add-apartment-property", type: "link", active: false, selected: false, title: "Add an Apartment Property" },
+      { path: "/dashboard/active-apartment-listings", type: "link", active: false, selected: false, title: "Active Listings" },
     ]
   },
   {

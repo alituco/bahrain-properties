@@ -1,6 +1,3 @@
-/* ------------------------------------------------------------------
-   Residential controller – create | list | delete | amenity options
--------------------------------------------------------------------*/
 import { RequestHandler } from 'express';
 import { pool }           from '../../config/db';
 import { AuthenticatedRequest } from '../../types/AuthenticatedRequest';
@@ -8,17 +5,17 @@ import { AuthenticatedRequest } from '../../types/AuthenticatedRequest';
 const must = (c: boolean, m: string) => { if (!c) throw new Error(m); };
 
 /* ──────────────────────────────────────────────────────────────────
-   POST /residential
+   POST /apartment
    – Creates a firm_properties row (and a unit stub when needed)
    – Always satisfies chk_locator_and_type:
        • unit_id  ➜ property_type = 'apartment'
        • parcelNo ➜ property_type = 'land'
    – Returns { id }
 ─────────────────────────────────────────────────────────────────── */
-export const createResidentialProperty: RequestHandler = async (req, res, next) => {
+export const createApartmentProperty: RequestHandler = async (req, res, next) => {
   const client = await pool.connect();
   try {
-    /* ── auth (falls back to body – handy for scripts / tests) ── */
+
     const sess      = (req as AuthenticatedRequest).user ?? undefined;
     const firm_id   = sess?.firm_id ?? req.body.firm_id;
     const user_id   = sess?.user_id ?? req.body.user_id;
@@ -27,7 +24,6 @@ export const createResidentialProperty: RequestHandler = async (req, res, next) 
       return;
     }
 
-    /* ── body fields ─────────────────────────────────────────── */
     const {
       parcel_no,               // locator for land
       unit_id,                 // existing unit
@@ -45,7 +41,6 @@ export const createResidentialProperty: RequestHandler = async (req, res, next) 
       description   = '',
       amenities     = [],      // string[]
 
-      /* coordinate-based unit creation */
       latitude, longitude,
       block_no, area_name_en, area_name_ar = area_name_en,
       floor = 0, size_m2 = 0,
@@ -66,7 +61,6 @@ export const createResidentialProperty: RequestHandler = async (req, res, next) 
 
     await client.query('BEGIN');
 
-    /* ── 1. Create unit stub if we’re not supplied one ───────── */
     let finalUnitId: number | null = unit_id ?? null;
 
     if (!parcel_no && !unit_id) {
@@ -90,11 +84,9 @@ export const createResidentialProperty: RequestHandler = async (req, res, next) 
         block_no, area_name_en, area_name_ar,
         floor, latitude, longitude, size_m2,
       ]);
-      finalUnitId = u.unit_id;                // now we have a unit
+      finalUnitId = u.unit_id;                
     }
 
-    /* ── 2. Insert firm_properties row ───────────────────────── */
-    // property_type must satisfy chk_locator_and_type
     const property_type = finalUnitId ? 'apartment' : 'land';
 
     const insertFP = `
@@ -125,7 +117,6 @@ export const createResidentialProperty: RequestHandler = async (req, res, next) 
     ]);
     const propertyId = fp.id;
 
-    /* ── 3. Amenity flags (true/false columns) ───────────────── */
     const amenCols = [
       'maids_room','study','central_ac','balcony','private_garden','private_pool',
       'shared_pool','security','concierge','covered_parking','built_in_wardrobes',
@@ -154,9 +145,9 @@ export const createResidentialProperty: RequestHandler = async (req, res, next) 
 };
 
 /* ------------------------------------------------------------------
-   DELETE /residential/:id
+   DELETE /apartment/:id
 -------------------------------------------------------------------*/
-export const deleteResidentialProperty: RequestHandler = async (req, res, next) => {
+export const deleteApartmentProperty: RequestHandler = async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).user;
     if (!user) { res.status(401).json({ message: 'Unauthorized' }); return; }
@@ -182,7 +173,7 @@ export const deleteResidentialProperty: RequestHandler = async (req, res, next) 
 /* ------------------------------------------------------------------
    GET /residential  (list for one firm)
 -------------------------------------------------------------------*/
-export const getFirmResidentialProperties: RequestHandler = async (req, res, next) => {
+export const getFirmApartmentProperties: RequestHandler = async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).user;
     if (!user) { res.status(401).json({ message: 'Unauthorized' }); return; }
@@ -225,7 +216,7 @@ export const getFirmResidentialProperties: RequestHandler = async (req, res, nex
 };
 
 /* ------------------------------------------------------------------
-   GET /residential/amenities
+   GET /apartment/amenities
 -------------------------------------------------------------------*/
 export const getAmenityOptions: RequestHandler = async (_req, res, next) => {
   try {
@@ -248,3 +239,68 @@ export const getAmenityOptions: RequestHandler = async (_req, res, next) => {
     });
   } catch (err) { next(err); }
 };
+
+/* ──────────────────────────────────────────────────────────
+   GET /apartment/:id   (single firm-owned apartment row)
+────────────────────────────────────────────────────────── */
+export const getApartmentProperty: RequestHandler = async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) {
+      res.status(401).json({ message:'Unauthorized' });
+     }
+
+    const { id } = req.params;
+    const { rows } = await pool.query(`
+      SELECT fp.*,
+             u.block_no, u.area_name_en, u.floor, u.size_m2,
+             u.latitude , u.longitude
+        FROM firm_properties fp
+        JOIN unit_properties u ON fp.unit_id = u.unit_id
+       WHERE fp.id = $1 AND fp.firm_id = $2
+         AND fp.property_type = 'apartment';
+    `,[id,user.firm_id]);
+
+    if (!rows.length) { 
+      res.status(404).json({ message:'Not found' });
+     }
+    res.json({ property: rows[0] });
+  } catch(err){ next(err); }
+};
+
+/* ──────────────────────────────────────────────────────────
+   PATCH /apartment/:id
+────────────────────────────────────────────────────────── */
+export const updateApartmentProperty: RequestHandler = async (req,res,next)=>{
+  try{
+    const user = (req as AuthenticatedRequest).user;
+    if(!user){ 
+      res.status(401).json({message:'Unauthorized'});
+     }
+
+    const { id } = req.params;
+    const {
+      status, title, description,
+      asking_price, rent_price
+    } = req.body;
+
+    const { rows } = await pool.query(`
+      UPDATE firm_properties SET
+        status        = COALESCE($3,status),
+        title         = COALESCE($4,title),
+        description   = COALESCE($5,description),
+        asking_price  = COALESCE($6,asking_price),
+        rent_price    = COALESCE($7,rent_price),
+        updated_at    = NOW()
+      WHERE id = $1 AND firm_id = $2
+        AND property_type = 'apartment'
+      RETURNING *;
+    `,[id,user.firm_id,status,title,description,asking_price,rent_price]);
+
+    if(!rows.length){ 
+      res.status(404).json({message:'Not found'});
+     }
+    res.json({ updatedProperty: rows[0] });
+  }catch(err){ next(err); }
+};
+

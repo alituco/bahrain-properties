@@ -86,7 +86,7 @@ const AddResidentialProperty: PageWithLayout = () => {
 
   useEffect(()=>{ (async()=>{
       try {
-        const res = await fetch(`${API}/residential/amenities`, {
+        const res = await fetch(`${API}/apartment/amenities`, {
           credentials: 'include'
         });
         const { amenities } = await res.json();
@@ -138,7 +138,7 @@ const AddResidentialProperty: PageWithLayout = () => {
       if(listingType==='sale') body.asking_price = price;
       else                      body.rent_price  = price;
 
-      const res = await fetch(`${API}/residential`,{
+      const res = await fetch(`${API}/apartment`,{
         method :'POST',
         credentials:'include',
         headers:{'Content-Type':'application/json'},
@@ -158,7 +158,8 @@ const AddResidentialProperty: PageWithLayout = () => {
         });
         if(!imgRes.ok) throw new Error(await imgRes.text());
       }
-
+      
+      router.push(`/apartment/${id}`)
       setToast({text:'Property created 🎉',variant:'success'});
       // minimal reset
       setImages([]); setTitle(''); setDesc('');
