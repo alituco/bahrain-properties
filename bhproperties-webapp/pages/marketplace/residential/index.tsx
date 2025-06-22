@@ -89,7 +89,7 @@ const ResidentialPage: PageWithLayout = () => {
       <div id="apt-filters">
         <FilterBar
           options={options}
-          onApply={(patch) => setFilters({ ...filters, ...patch })}
+          onApply={(f) => setFilters({ ...filters, ...f })}
         />
       </div>
 
