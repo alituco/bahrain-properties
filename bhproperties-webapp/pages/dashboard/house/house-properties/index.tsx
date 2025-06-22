@@ -1,3 +1,6 @@
+/* ------------------------------------------------------------------
+   Firm – House Properties list  (dash)
+-------------------------------------------------------------------*/
 'use client';
 
 import React, { Fragment, useEffect, useState } from 'react';
@@ -16,6 +19,9 @@ const MapContainer = dynamic(
   { ssr: false }
 );
 
+/* -------------------------------------------------- */
+/*  Row-shape coming from  GET /house  for one firm   */
+/* -------------------------------------------------- */
 interface HouseRow {
   id            : number;
   title         : string | null;
@@ -37,16 +43,19 @@ export default function FirmHousesPage() {
   const API    = process.env.NEXT_PUBLIC_API_URL!;
   const router = useRouter();
 
+  /* -------------------- state -------------------- */
   const [rows,   setRows]   = useState<HouseRow[]>([]);
   const [loading, setLoad]  = useState(true);
   const [error,  setErr]    = useState<string | null>(null);
   const [flyTo,  setFlyTo]  = useState<{ lat: number; lon: number } | null>(null);
 
+  /* -------------------- auth guard --------------- */
   useEffect(() => { (async () => {
     const r = await fetch(`${API}/user/me`, { credentials: 'include' });
     if (!r.ok) { router.replace('/'); return; }
   })(); }, [API, router]);
 
+  /* -------------------- data load ---------------- */
   useEffect(() => { (async () => {
     try {
       const r = await fetch(`${API}/house`, { credentials: 'include' });
@@ -57,6 +66,7 @@ export default function FirmHousesPage() {
       finally        { setLoad(false); }
   })(); }, [API]);
 
+  /* -------------------- ui ----------------------- */
   if (loading) {
     return (
       <div className="vh-100 d-flex justify-content-center align-items-center">
@@ -69,6 +79,7 @@ export default function FirmHousesPage() {
     <Fragment>
       <Seo title="Firm Houses" />
 
+      {/* ---- breadcrumb / heading ---- */}
       <div className="d-flex align-items-center justify-content-between page-header-breadcrumb flex-wrap gap-2">
         <div>
           <SpkBreadcrumb Customclass="mb-1">
@@ -81,6 +92,7 @@ export default function FirmHousesPage() {
 
       {error && <SpkAlert variant="danger" CustomClass="mb-3" show>{error}</SpkAlert>}
 
+      {/* ---- main table ---- */}
       <Row><Col xl={12}>
         <Card className="custom-card">
           <Card.Header><div className="card-title">List</div></Card.Header>
@@ -147,6 +159,7 @@ export default function FirmHousesPage() {
         </Card>
       </Col></Row>
 
+      {/* ---- map (only when a row-button has been clicked) ---- */}
       {flyTo && (
         <Row className="mt-4"><Col xl={12}>
           <Card className="custom-card">

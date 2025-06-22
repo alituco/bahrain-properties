@@ -3,24 +3,24 @@
 import React from 'react';
 import { Card, Carousel } from 'react-bootstrap';
 import Link from 'next/link';
-import type { Apartment } from '../types';
+import type { House } from '../types';
 
-const AptCard: React.FC<{ apartment: Apartment }> = ({ apartment: a }) => {
+const HouseCard: React.FC<{ house: House }> = ({ house: h }) => {
   const price =
-    a.listing_type === 'sale'
-      ? `${(a.asking_price ?? 0).toLocaleString()} BHD`
-      : `${(a.rent_price ?? 0).toLocaleString()} BHD/mo`;
+    h.listing_type === 'sale'
+      ? `${(h.asking_price ?? 0).toLocaleString()} BHD`
+      : `${(h.rent_price ?? 0).toLocaleString()} BHD/mo`;
 
-  const href = `/marketplace/residential/apartment/${a.id}`;
+  const href = `/marketplace/residential/house/${h.id}`;
 
-  const media = a.images.length ? (
+  const media = h.images.length ? (
     <Carousel
       indicators={false}
-      controls={a.images.length > 1}
+      controls={h.images.length > 1}
       interval={null}
-      className="apt-carousel"
+      className="house-carousel"
     >
-      {a.images.map((url, i) => (
+      {h.images.map((url, i) => (
         <Carousel.Item key={i} className="w-100 h-100">
           <img
             src={url}
@@ -44,24 +44,24 @@ const AptCard: React.FC<{ apartment: Apartment }> = ({ apartment: a }) => {
     <Link href={href} className="text-reset text-decoration-none">
       <Card className="h-100 shadow-sm">
         <div className="ratio ratio-16x9 overflow-hidden position-relative">{media}</div>
-        <span className="apt-price badge bg-warning text-dark">{price}</span>
+        <span className="house-price badge bg-warning text-dark">{price}</span>
 
         <Card.Body className="pt-3">
           <h6 className="fw-semibold mb-1">
-            {a.title?.trim() || 'Untitled Apartment'}
+            {h.title?.trim() || 'Untitled House'}
           </h6>
           <p className="text-muted mb-2 fs-14">
             <i className="ti ti-map-pin me-1" />
-            {a.area_name || '—'}
+            {h.area_name || '—'}
           </p>
           <p className="mb-0 text-muted fs-14">
-            {a.bedrooms} bd • {a.bathrooms} ba
+            {h.bedrooms} bd • {h.bathrooms} ba
           </p>
         </Card.Body>
       </Card>
 
       <style jsx>{`
-        .apt-price {
+        .house-price {
           position: absolute;
           top: 0.5rem;
           left: 0.5rem;
@@ -72,12 +72,12 @@ const AptCard: React.FC<{ apartment: Apartment }> = ({ apartment: a }) => {
           font-size: 0.75rem;
           line-height: 1;
         }
-        .apt-carousel .carousel-control-prev,
-        .apt-carousel .carousel-control-next {
+        .house-carousel .carousel-control-prev,
+        .house-carousel .carousel-control-next {
           width: 2.25rem;
         }
-        .apt-carousel .carousel-control-prev-icon,
-        .apt-carousel .carousel-control-next-icon {
+        .house-carousel .carousel-control-prev-icon,
+        .house-carousel .carousel-control-next-icon {
           background-color: rgba(0, 0, 0, 0.45);
           border-radius: 50%;
           background-size: 60% 60%;
@@ -88,4 +88,4 @@ const AptCard: React.FC<{ apartment: Apartment }> = ({ apartment: a }) => {
   );
 };
 
-export default AptCard;
+export default HouseCard;

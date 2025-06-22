@@ -19,6 +19,8 @@ import houseRoutes from './routes/house/house.routes'
 
 import listedLandRoutes from './routes/marketplace/land.routes';
 import apartmentMarketplaceRoutes from './routes/marketplace/apartments.routes'
+import housesMarketplaceRoutes from './routes/marketplace/house.routes'
+import residentialMarketplaceRoutes from './routes/marketplace/listedResidential.routes';
 
 const app = express();
 
@@ -52,11 +54,12 @@ app.use('/firmSpecificData', firmSpecificDataRoutes);
 app.use('/apartment', apartmentRoutes);
 app.use('/house', houseRoutes)
 
+app.use('/marketplace/residential', residentialMarketplaceRoutes);
 
 // Marketplace-related calls
 app.use('/land', listedLandRoutes);
 app.use('/marketplace/apartments', apartmentMarketplaceRoutes)
-
+app.use('/marketplace/houses', housesMarketplaceRoutes)
 
 app.listen(Number(config.port), '0.0.0.0', () => {
   console.log(`Server running on port ${config.port}`);

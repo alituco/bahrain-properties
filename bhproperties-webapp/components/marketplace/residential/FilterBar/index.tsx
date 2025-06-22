@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Row, Col, Button, Form, Container } from 'react-bootstrap';
-import type { AptOptions } from '../AptCard';
+import type { AptOptions } from '../types';
 
 type Props = {
   options : AptOptions;

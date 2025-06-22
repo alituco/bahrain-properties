@@ -42,7 +42,7 @@ export const MENUITEMS: any = [
 
   {
     title: "House", icon: PropertyIcon, type: "sub", active: false, children: [
-      { path: "/dashboard/house/properties", type: "link", active: false, selected: false, title: "House Properties" },
+      { path: "/dashboard/house/house-properties", type: "link", active: false, selected: false, title: "House Properties" },
       { path: "/dashboard/house/add-house-property", type: "link", active: false, selected: false, title: "Add an House Property" },
       { path: "/dashboard/active-house-listings", type: "link", active: false, selected: false, title: "Active Listings" },
     ]
