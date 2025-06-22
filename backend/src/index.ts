@@ -12,8 +12,10 @@ import userRoutes from './routes/user.routes';
 import propertyNotesRoutes from './routes/propertyNotes.routes';
 import firmPropertiesRouter from './routes/firmProperties.controller';
 import propertyFiltersRoutes from './routes/propertyFilters.routes';
+
 import firmSpecificDataRoutes from './routes/firmSpecificData.routes';
 import apartmentRoutes from './routes/apartment/apartment.routes'
+import houseRoutes from './routes/house/house.routes'
 
 import listedLandRoutes from './routes/marketplace/land.routes';
 import apartmentMarketplaceRoutes from './routes/marketplace/apartments.routes'
@@ -35,7 +37,6 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// Mount route handlers
 app.use('/coordinates', coordinatesRoutes);
 app.use('/parcelData', parcelRoutes);
 app.use('/predict', predictRoutes);
@@ -45,9 +46,14 @@ app.use('/user', userRoutes);
 app.use('/property-notes', propertyNotesRoutes);
 app.use('/firm-properties', firmPropertiesRouter);
 app.use('/propertyFilters', propertyFiltersRoutes);
+
+// Firm-related calls
 app.use('/firmSpecificData', firmSpecificDataRoutes);
 app.use('/apartment', apartmentRoutes);
+app.use('/house', houseRoutes)
 
+
+// Marketplace-related calls
 app.use('/land', listedLandRoutes);
 app.use('/marketplace/apartments', apartmentMarketplaceRoutes)
 

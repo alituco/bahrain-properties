@@ -1,0 +1,61 @@
+/* ------------------------------------------------------------------
+   React-Select ↔ Bootstrap 5 theme harmonisation
+   – all colours respect the current CSS variables and therefore work
+     in light *and* dark mode.
+-------------------------------------------------------------------*/
+
+/* -------- sizes / metrics (keeps Bootstrap defaults) ------------- */
+$control-min-height: calc(1.5em + .75rem + 2px);
+
+/* -------- colours taken from CSS vars ---------------------------- */
+$control-bg : var(--bs-body-bg);
+$menu-bg    : $control-bg;
+$chip-bg    : rgba(var(--bs-secondary-rgb, 108,117,125), .15);
+
+/* -------- control (closed state) --------------------------------- */
+.react-select__control {
+  background: $control-bg !important;        // dark-mode aware
+  border-color: var(--bs-border-color) !important;
+  min-height: $control-min-height;
+}
+
+/* -------- menu (open state) -------------------------------------- */
+.react-select__menu {
+  background: $menu-bg !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* -------- text colours ------------------------------------------- */
+.react-select__single-value,
+.react-select__multi-value__label,
+.react-select__option {
+  color: var(--bs-body-color) !important;
+}
+
+.react-select__placeholder {
+  color: var(--bs-secondary-color) !important;
+}
+
+/* -------- option hover / selected -------------------------------- */
+.react-select__option--is-focused {
+  background: var(--bs-tertiary-bg) !important;
+}
+.react-select__option--is-selected {
+  background: var(--bs-primary) !important;
+  color: #fff !important;
+}
+
+/* -------- multi-value “chips” ------------------------------------ */
+.react-select__multi-value {
+  background: $chip-bg !important;
+}
+.react-select__multi-value__remove:hover {
+  background: var(--bs-danger) !important;
+  color: #fff !important;
+}
+
+/* -------- misc tweaks -------------------------------------------- */
+.react-select__indicator-separator { display: none; }
+.react-select__control--is-focused {
+  box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .25) !important;
+}

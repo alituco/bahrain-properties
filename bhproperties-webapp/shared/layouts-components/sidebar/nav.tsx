@@ -39,6 +39,14 @@ export const MENUITEMS: any = [
       { path: "/dashboard/active-apartment-listings", type: "link", active: false, selected: false, title: "Active Listings" },
     ]
   },
+
+  {
+    title: "House", icon: PropertyIcon, type: "sub", active: false, children: [
+      { path: "/dashboard/house/properties", type: "link", active: false, selected: false, title: "House Properties" },
+      { path: "/dashboard/house/add-house-property", type: "link", active: false, selected: false, title: "Add an House Property" },
+      { path: "/dashboard/active-house-listings", type: "link", active: false, selected: false, title: "Active Listings" },
+    ]
+  },
   {
     title: "Realtors", icon: MembersIcon, type: "sub", active: false, children: [
       { path: "/dashboard/realtors", type: "link", active: false, selected: false, title: "View Realtors" },
