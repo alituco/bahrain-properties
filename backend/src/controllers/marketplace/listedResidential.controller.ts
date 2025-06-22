@@ -4,50 +4,55 @@
 import { RequestHandler } from 'express';
 import { pool }           from '../../config/db';
 
-/* helper to push dynamic conditions -------------------------------- */
+/* utility to append a dynamic clause -------------------------------- */
 const add = (
   val: any, clause: string, where: string[], params: any[],
-) => { params.push(val); where.push(clause.replace('?', `$${params.length}`)); };
+) => {
+  params.push(val);
+  where.push(clause.replace('?', `$${params.length}`));
+};
 
-/* option-set shapes (for filter drop-downs) ------------------------ */
+/* option-set row shapes (for filter drop-downs) --------------------- */
 interface BedRow  { bedrooms  : number }
 interface BathRow { bathrooms : number }
 interface AreaRow { area_name : string }
 
-/* ================================================================
-   GET /marketplace/residential
-   → list every “available” apartment **and** house
-=============================================================== */
+/* ===================================================================
+   GET  /marketplace/residential
+   → list every “available” apartment **and** house, with filters
+=================================================================== */
 export const getListedResidential: RequestHandler = async (req, res, next) => {
   try {
     const {
-      type,                              // 'apartment' | 'house'
+      type,                        // 'apartment' | 'house'
+      listing_type,                // 'sale' | 'rent'
       bedrooms, bathrooms, area_name,
       minPrice,  maxPrice,
-      sort = '',                         // '' | 'asc' | 'desc'
+      sort = '',                   // '' | 'asc' | 'desc'
     } = req.query as Record<string, string>;
 
-    /* -- WHERE clause ------------------------------------------ */
+    /* ---------- WHERE clause assembly ------------------------ */
     const where:  string[] = [
       "fp.status = 'available'",
       "fp.property_type IN ('apartment','house')",
     ];
     const params: any[] = [];
 
-    if (type)      add(type,      'fp.property_type = ?', where, params);
-    if (bedrooms)  add(+bedrooms, 'fp.bedrooms      = ?', where, params);
-    if (bathrooms) add(+bathrooms,'fp.bathrooms     = ?', where, params);
-    if (area_name) add(area_name,
-                       'COALESCE(u.area_name_en, h.area_name_en) = ?',
-                       where, params);
-    if (minPrice)  add(minPrice,
-                       'COALESCE(fp.asking_price, fp.rent_price) >= ?',
-                       where, params);
-    if (maxPrice)  add(maxPrice,
-                       'COALESCE(fp.asking_price, fp.rent_price) <= ?',
-                       where, params);
+    if (type)         add(type,         'fp.property_type = ?', where, params);
+    if (listing_type) add(listing_type, 'fp.listing_type  = ?', where, params);
+    if (bedrooms)     add(+bedrooms,    'fp.bedrooms      = ?', where, params);
+    if (bathrooms)    add(+bathrooms,   'fp.bathrooms     = ?', where, params);
+    if (area_name)    add(area_name,
+                          'COALESCE(u.area_name_en, h.area_name_en) = ?',
+                          where, params);
+    if (minPrice)     add(minPrice,
+                          'COALESCE(fp.asking_price, fp.rent_price) >= ?',
+                          where, params);
+    if (maxPrice)     add(maxPrice,
+                          'COALESCE(fp.asking_price, fp.rent_price) <= ?',
+                          where, params);
 
-    /* -- main SELECT ------------------------------------------- */
+    /* ---------- main SELECT ---------------------------------- */
     const sql = `
       SELECT fp.id,
              fp.property_type,
@@ -61,7 +66,7 @@ export const getListedResidential: RequestHandler = async (req, res, next) => {
              COALESCE(u.latitude    , h.latitude   ) AS latitude,
              COALESCE(u.longitude   , h.longitude  ) AS longitude,
 
-             /* images (oldest → newest) */
+             /* all images (oldest → newest) ------------------- */
              COALESCE(
                (SELECT json_agg(file_url ORDER BY id)
                   FROM firm_property_images
@@ -70,8 +75,8 @@ export const getListedResidential: RequestHandler = async (req, res, next) => {
              ) AS images
 
       FROM   firm_properties fp
-      LEFT   JOIN unit_properties  u ON u.unit_id  = fp.unit_id
-      LEFT   JOIN house_properties h ON h.house_id = fp.house_id
+      LEFT   JOIN unit_properties  u ON u.unit_id  = fp.unit_id   -- apartments
+      LEFT   JOIN house_properties h ON h.house_id = fp.house_id  -- houses
       WHERE  ${where.join(' AND ')}
       ORDER  BY ${
         sort === 'asc'  ? 'COALESCE(fp.asking_price, fp.rent_price) ASC'  :
@@ -82,7 +87,7 @@ export const getListedResidential: RequestHandler = async (req, res, next) => {
 
     const { rows: listings } = await pool.query(sql, params);
 
-    /* -- option-sets for UI filters ----------------------------- */
+    /* ---------- option-sets for the filter bar ---------------- */
     const [beds, baths, areas] = await Promise.all([
       pool.query<BedRow>(`
         SELECT DISTINCT bedrooms
@@ -106,10 +111,11 @@ export const getListedResidential: RequestHandler = async (req, res, next) => {
               FROM house_properties
           ) AS t
          WHERE area_name IS NOT NULL
-         ORDER BY area_name;
+         ORDER  BY area_name;
       `),
     ]);
 
+    /* ---------- response ------------------------------------- */
     res.json({
       listings,
       options: {
@@ -117,6 +123,7 @@ export const getListedResidential: RequestHandler = async (req, res, next) => {
         bathrooms: baths.rows.map(b => String(b.bathrooms)),
         areas    : areas.rows.map(a => a.area_name),
         types    : ['apartment', 'house'],
+        deals    : ['sale', 'rent'],        // for “Buy / Rent” select
       },
     });
   } catch (err) {
@@ -125,10 +132,10 @@ export const getListedResidential: RequestHandler = async (req, res, next) => {
   }
 };
 
-/* ================================================================
-   GET /marketplace/residential/:id
-   → details for a single apartment **or** house
-=============================================================== */
+/* ===================================================================
+   GET  /marketplace/residential/:id
+   → detail for a single apartment **or** house
+=================================================================== */
 export const getResidentialById: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -136,7 +143,7 @@ export const getResidentialById: RequestHandler = async (req, res, next) => {
     const sql = `
       SELECT fp.*,
 
-             /* unit- or house-specific extras ------------------- */
+             /* unit- vs house-specific extras ------------------- */
              u.floor, u.size_m2,
              h.floors, h.plot_size_m2, h.built_up_m2,
 
@@ -145,7 +152,7 @@ export const getResidentialById: RequestHandler = async (req, res, next) => {
              COALESCE(u.latitude    , h.latitude    ) AS latitude,
              COALESCE(u.longitude   , h.longitude   ) AS longitude,
 
-             /* images */
+             /* images ------------------------------------------ */
              COALESCE(
                (SELECT json_agg(file_url ORDER BY id)
                   FROM firm_property_images
@@ -153,7 +160,7 @@ export const getResidentialById: RequestHandler = async (req, res, next) => {
                '[]'
              ) AS images,
 
-             /* contact */
+             /* contact ----------------------------------------- */
              CONCAT(us.first_name,' ',us.last_name) AS realtor_name,
              us.phone_number,
              us.email,
