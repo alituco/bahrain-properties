@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState } from 'react';
+import Image from 'next/image';
 import Seo        from '@/shared/layouts-components/seo/seo';
 import Hero       from '@/components/marketplace/residential/Hero';
 import FilterBar  from '@/components/marketplace/residential/FilterBar';
@@ -42,7 +43,15 @@ const ResidentialPage: PageWithLayout = () => {
 
       <div className="container my-4">
         {loading
-          ? <p className="text-center">Loading apartments…</p>
+          ? <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "300px" }}>
+                <Image
+                  src="/assets/images/media/loader.svg"
+                  width={64}
+                  height={64}
+                  alt="Loading…"
+                  priority
+                />
+              </div>
           : <Grid apartments={apts} />}
       </div>
     </Fragment>

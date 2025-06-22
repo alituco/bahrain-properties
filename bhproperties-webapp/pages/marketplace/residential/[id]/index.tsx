@@ -4,8 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import {
   Container, Row, Col, Card,
-  Carousel, Badge, Spinner
+  Carousel, Badge
 } from 'react-bootstrap';
+import Image from 'next/image';
 import Seo        from '@/shared/layouts-components/seo/seo';
 import MapDisplay from '@/components/marketplace/land/MapDisplay';
 
@@ -60,7 +61,13 @@ export default function ApartmentDetailPage() {
 
   if (busy)
     return <div className="vh-100 d-flex justify-content-center align-items-center">
-      <Spinner animation="border" />
+        <Image
+            src="/assets/images/media/loader.svg"
+            width={64}
+            height={64}
+            alt="Loading…"
+            priority
+          />
     </div>;
   if (err)    return <p className="text-danger text-center my-5">{err}</p>;
   if (!apt)   return null;
@@ -123,11 +130,15 @@ export default function ApartmentDetailPage() {
           )}
 
           {/* quick spec row -------------------------------------- */}
-          <Card.Body className="d-flex flex-wrap gap-3 border-top pt-3">
-            <Pill txt={priceStr}           variant="warning" />
-            {apt.size_m2 && <Pill txt={`${apt.size_m2} m²`} variant="secondary" />}
-            <Pill txt={`${apt.bedrooms} bd`} />
-            <Pill txt={`${apt.bathrooms} ba`} />
+          <Card.Body className="d-flex flex-wrap gap-3 border-top pt-3 justify-content-between">
+            <div className="d-flex gap-3">
+                <Pill txt={priceStr}           variant="primary" />
+                {apt.size_m2 && <Pill txt={`${apt.size_m2} m²`} variant="primary" />}
+            </div>
+            <div className="d-flex gap-3">
+                <Pill txt={`${apt.bedrooms} bd`} variant='secondary'/>
+                <Pill txt={`${apt.bathrooms} ba`} variant='secondary' />
+            </div>
           </Card.Body>
         </Card>
       </Container>
