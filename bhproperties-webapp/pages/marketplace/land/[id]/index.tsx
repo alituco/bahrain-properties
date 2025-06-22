@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
-import { Badge, Card, Col, Container, Row, Spinner } from 'react-bootstrap';
+import { Badge, Card, Col, Container, Row} from 'react-bootstrap';
+import Image from 'next/image';
 import Seo from '@/shared/layouts-components/seo/seo';
 import MapDisplay from '@/components/marketplace/land/MapDisplay';
 import { Land } from '@/components/marketplace/land/LandCard';
@@ -41,7 +42,13 @@ export default function LandDetailPage() {
   if (!land || !geo)
     return (
       <div className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" />
+          <Image
+              src="/assets/images/media/loader.svg"
+              width={64}
+              height={64}
+              alt="Loading…"
+              priority
+            />
       </div>
     );
 

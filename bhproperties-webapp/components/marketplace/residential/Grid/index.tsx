@@ -2,15 +2,27 @@
 
 import React from 'react';
 import { Row, Col } from 'react-bootstrap';
-import AptCard, { Apartment } from '../AptCard';
+import AptCard   from '../AptCard';
+import HouseCard from '../HouseCard';
+import type { Listing } from '../types';
 
-const Grid: React.FC<{ apartments: Apartment[] }> = ({ apartments }) => (
+interface Props {
+  listings: Listing[];
+}
+
+const Grid: React.FC<Props> = ({ listings }) => (
   <Row className="g-3">
-    {apartments.map(a => (
-      <Col key={a.id} xxl={3} xl={4} md={6}>
-        <AptCard apartment={a} />
-      </Col>
-    ))}
+    {listings.map((l) =>
+      l.property_type === 'apartment' ? (
+        <Col key={l.id} xxl={3} xl={4} md={6}>
+          <AptCard apartment={l} />
+        </Col>
+      ) : (
+        <Col key={l.id} xxl={3} xl={4} md={6}>
+          <HouseCard house={l} />
+        </Col>
+      )
+    )}
   </Row>
 );
 

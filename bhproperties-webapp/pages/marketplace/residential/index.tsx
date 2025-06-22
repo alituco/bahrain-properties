@@ -1,53 +1,123 @@
+/* ------------------------------------------------------------------
+   Marketplace ▸ Residential  (apartments + houses)
+-------------------------------------------------------------------*/
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
+import Image from 'next/image';
+
 import Seo        from '@/shared/layouts-components/seo/seo';
 import Hero       from '@/components/marketplace/residential/Hero';
 import FilterBar  from '@/components/marketplace/residential/FilterBar';
 import Grid       from '@/components/marketplace/residential/Grid';
-import { PageWithLayout } from '@/types/PageWithLayout';
-import type { AptOptions, Apartment } from '@/components/marketplace/residential/AptCard';
+
+import type {
+  Listing,           // union of Apartment & House plus property_type tag
+  ResidentialOptions // { bedrooms:string[]; bathrooms:string[]; areas:string[]; types:string[] }
+} from '@/components/marketplace/residential/types';
+
+import type { PageWithLayout } from '@/types/PageWithLayout';
 
 const API = process.env.NEXT_PUBLIC_API_URL!;
 
+/* --- querystring shape we forward to the backend ---------------- */
+type Filters = {
+  status     : 'available' | 'listed' | 'draft';
+  type?      : 'apartment' | 'house';
+  bedrooms?  : string;
+  bathrooms? : string;
+  area_name? : string;
+  sort?      : 'asc' | 'desc';
+  minPrice?  : string;
+  maxPrice?  : string;
+};
+
 const ResidentialPage: PageWithLayout = () => {
-  const [filters, setFilters] = useState<Record<string, string>>({ status: 'available' });
-  const [apts, setApts]       = useState<Apartment[]>([]);
-  const [options, setOptions] = useState<AptOptions>({
-    bedrooms: [], bathrooms: [], areas: [],
+  /* ------------ state ------------------------------------------ */
+  const [filters , setFilters ] = useState<Filters>({ status: 'available' });
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [options , setOptions ] = useState<ResidentialOptions>({
+    bedrooms: [], bathrooms: [], areas: [], types: ['apartment', 'house'],
   });
-  const [loading, setLoading] = useState(true);
+  const [loading , setLoading ] = useState(true);
+  const [error   , setError   ] = useState<string | null>(null);
 
-  useEffect(() => { (async () => {
-    setLoading(true);
-    const qs  = new URLSearchParams(filters).toString();
-    const res = await fetch(`${API}/marketplace/apartments?${qs}`, { credentials: 'include' });
-    const { apartments, options } = await res.json();
-    setApts(apartments);
-    setOptions(options);
-    setLoading(false);
-  })(); }, [filters]);
+  /* ------------ fetch on filter change ------------------------- */
+  useEffect(() => {
+    (async () => {
+      setLoading(true); setError(null);
 
+      /* only defined entries → query string */
+      const qs = new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(filters).filter(([, v]) => v !== '' && v !== undefined)
+        ) as Record<string, string>
+      ).toString();
+
+      try {
+        const r = await fetch(`${API}/marketplace/residential?${qs}`, {
+          credentials: 'include',
+        });
+        if (!r.ok) throw new Error(await r.text());
+
+        const { listings, options } = await r.json();
+        setListings(listings as Listing[]);
+        setOptions(options as ResidentialOptions);
+      } catch (e: any) {
+        setError(e.message ?? 'Failed to load listings');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [filters]);
+
+  /* ------------ UI --------------------------------------------- */
   return (
     <Fragment>
-      <Seo title="Apartments for Sale & Rent in Bahrain" />
+      <Seo title="Properties for Sale & Rent in Bahrain" />
 
-      <Hero onFilterClick={() =>
-        document.getElementById('apt-filters')?.scrollIntoView({ behavior: 'smooth' })
-      } />
+      {/* Hero with scroll-to-filter shortcut */}
+      <Hero
+        onFilterClick={() =>
+          document
+            .getElementById('apt-filters')
+            ?.scrollIntoView({ behavior: 'smooth' })
+        }
+      />
 
+      {/* filter bar */}
       <div id="apt-filters">
-        <FilterBar options={options} onApply={setFilters} />
+        <FilterBar
+          options={options}
+          onApply={(f) => setFilters({ ...filters, ...f })}
+        />
       </div>
 
+      {/* listings grid */}
       <div className="container my-4">
-        {loading
-          ? <p className="text-center">Loading apartments…</p>
-          : <Grid apartments={apts} />}
+        {loading ? (
+          <div
+            className="d-flex justify-content-center align-items-center"
+            style={{ minHeight: 300 }}
+          >
+            <Image
+              src="/assets/images/media/loader.svg"
+              width={64}
+              height={64}
+              alt="Loading…"
+              priority
+            />
+          </div>
+        ) : error ? (
+          <p className="text-danger text-center my-5">{error}</p>
+        ) : (
+          <Grid listings={listings} />
+        )}
       </div>
     </Fragment>
   );
 };
 
+/* BlankLayout is registered in your layout registry */
 ResidentialPage.layout = 'BlankLayout';
 export default ResidentialPage;
