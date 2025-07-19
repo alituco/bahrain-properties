@@ -54,7 +54,6 @@ const LandPage: PageWithLayout = () => {
                 height={64}
                 alt="Loading…"
                 priority
-                
               />
             </div>
           : <Grid land={land}/>
