@@ -45,17 +45,14 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
     /* build the query-string payload the back-end expects           */
     const f: Record<string, string> = { status: 'available' };
 
-    /* NOTE: we *always* include the key – even if the value is ''.
-       The parent replaces its filter object entirely, so stale keys
-       disappear automatically.                                       */
+
     f.type          = state.ptype;          // '' | house | apartment
     f.listing_type  = state.deal;           // '' | sale | rent
     f.sort          = state.sort;
-    if (state.beds ) f.bedrooms  = state.beds;
-    if (state.baths) f.bathrooms = state.baths;
-    if (state.area ) f.area_name = state.area;
-    if (state.sort ) f.sort      = state.sort;
-    if (state.minP ) f.minP      = state.minP;
+    f.bedrooms = state.beds;
+    f.bathrooms = state.baths;
+    f.area_name = state.area;
+    f.sort      = state.sort;
 
 
 
@@ -72,7 +69,6 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
       f.maxPrice = "999999999"
     }
 
-    /* hand the brand-new filter object to the page component ----- */
     onApply(f);
   };
 
@@ -80,7 +76,17 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
   const clear = () => {
     setPtype(''); setDeal(''); setBeds(''); setBaths('');
     setArea(''); setSort(''); setMinP(''); setMaxP('');
-    onApply({ status: 'available', type:'', listing_type:'' });
+    onApply({
+      status      : 'available',
+      type        : '',
+      listing_type: '',
+      bedrooms    : '',
+      bathrooms   : '',
+      area_name   : '',
+      sort        : '',
+      minPrice    : '',
+      maxPrice    : '',
+    });
   };
 
   const hasFilters =
@@ -122,7 +128,10 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
         {/* bedrooms / baths / area ----------------------------- */}
         <Col md={2}>
           <Form.Label className="mb-1">Bedrooms</Form.Label>
-          <Form.Select value={beds} onChange={e=>push({beds:e.target.value})}>
+          <Form.Select 
+            value={beds} 
+            onChange={ e => push({ beds : e.target.value })}>
+
             <option value="">Any</option>
             {options.bedrooms.map(n=><option key={n}>{n}</option>)}
           </Form.Select>
