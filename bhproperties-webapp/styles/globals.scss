@@ -1,4 +1,5 @@
 @forward "../public/assets/css/styles.css";
+@use "../public/assets/scss/menu-styles/react_select_overrides" as *;
 
 
 
@@ -18,7 +19,6 @@
 @import "@simonwep/pickr/dist/themes/classic.min.css";
 @import "@simonwep/pickr/dist/themes/monolith.min.css";
 @import "@simonwep/pickr/dist/themes/nano.min.css";
-@import "../public/assets/scss/menu-styles/_react_select_overrides";
 
 @import "flatpickr/dist/flatpickr.css";
 
