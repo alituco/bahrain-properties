@@ -23,14 +23,13 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
   const [maxP  , setMaxP  ] = useState('');
 
   /* ---------- helper --------------------------------------------- */
-  const emit = (next: Partial<Record<
+  const push = (
+    next: Partial<Record<
     'ptype'|'deal'|'beds'|'baths'|'area'|'sort'|'minP'|'maxP', string
   >>) => {
     /* merge into the in-component state … */
     const state = {
-      ptype , deal , beds , baths ,
-      area  , sort , minP , maxP ,
-      ...next
+      ptype , deal , beds , baths , area  , sort , minP , maxP , ...next
     };
 
     /* …and sync the individual pieces of state                     */
@@ -46,19 +45,30 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
     /* build the query-string payload the back-end expects           */
     const f: Record<string, string> = { status: 'available' };
 
-    /* NOTE: we *always* include the key – even if the value is ''.
-       The parent replaces its filter object entirely, so stale keys
-       disappear automatically.                                       */
+
     f.type          = state.ptype;          // '' | house | apartment
     f.listing_type  = state.deal;           // '' | sale | rent
-    if (state.beds ) f.bedrooms  = state.beds;
-    if (state.baths) f.bathrooms = state.baths;
-    if (state.area ) f.area_name = state.area;
-    if (state.sort ) f.sort      = state.sort;
-    if (state.minP ) f.minPrice  = state.minP;
-    if (state.maxP ) f.maxPrice  = state.maxP;
+    f.sort          = state.sort;
+    f.bedrooms = state.beds;
+    f.bathrooms = state.baths;
+    f.area_name = state.area;
+    f.sort      = state.sort;
 
-    /* hand the brand-new filter object to the page component ----- */
+
+
+    // TEMPORARY FILTER FIXES
+    if (state.minP && state.minP.length > 1) {
+      f.minPrice  = state.minP;
+    } else {
+      f.minPrice = "0";
+    }
+
+    if (state.maxP && state.maxP.length >= 1) {
+      f.maxPrice  = state.maxP
+    } else {
+      f.maxPrice = "999999999"
+    }
+
     onApply(f);
   };
 
@@ -66,7 +76,17 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
   const clear = () => {
     setPtype(''); setDeal(''); setBeds(''); setBaths('');
     setArea(''); setSort(''); setMinP(''); setMaxP('');
-    onApply({ status: 'available', type:'', listing_type:'' });
+    onApply({
+      status      : 'available',
+      type        : '',
+      listing_type: '',
+      bedrooms    : '',
+      bathrooms   : '',
+      area_name   : '',
+      sort        : '',
+      minPrice    : '',
+      maxPrice    : '',
+    });
   };
 
   const hasFilters =
@@ -83,7 +103,7 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
           <Form.Label className="mb-1">Property</Form.Label>
           <Form.Select
             value={ptype}
-            onChange={e => emit({ ptype: e.target.value })}
+            onChange={e => push({ ptype: e.target.value })}
           >
             <option value="">Both</option>
             {options.types.map(t => (
@@ -97,7 +117,7 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
           <Form.Label className="mb-1">Deal&nbsp;Type</Form.Label>
           <Form.Select
             value={deal}
-            onChange={e => emit({ deal: e.target.value })}
+            onChange={e => push({ deal: e.target.value })}
           >
             <option value="">Any</option>
             <option value="sale">Buy&nbsp;/&nbsp;Sale</option>
@@ -108,7 +128,10 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
         {/* bedrooms / baths / area ----------------------------- */}
         <Col md={2}>
           <Form.Label className="mb-1">Bedrooms</Form.Label>
-          <Form.Select value={beds} onChange={e=>emit({beds:e.target.value})}>
+          <Form.Select 
+            value={beds} 
+            onChange={ e => push({ beds : e.target.value })}>
+
             <option value="">Any</option>
             {options.bedrooms.map(n=><option key={n}>{n}</option>)}
           </Form.Select>
@@ -116,7 +139,7 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
 
         <Col md={2}>
           <Form.Label className="mb-1">Bathrooms</Form.Label>
-          <Form.Select value={baths} onChange={e=>emit({baths:e.target.value})}>
+          <Form.Select value={baths} onChange={e=>push({baths:e.target.value})}>
             <option value="">Any</option>
             {options.bathrooms.map(n=><option key={n}>{n}</option>)}
           </Form.Select>
@@ -124,7 +147,7 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
 
         <Col md={2}>
           <Form.Label className="mb-1">Area</Form.Label>
-          <Form.Select value={area} onChange={e=>emit({area:e.target.value})}>
+          <Form.Select value={area} onChange={e=>push({area:e.target.value})}>
             <option value="">All</option>
             {options.areas.map(a=> <option key={a}>{a}</option>)}
           </Form.Select>
@@ -133,7 +156,7 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
         {/* price sort ------------------------------------------ */}
         <Col md={2}>
           <Form.Label className="mb-1">Price&nbsp;Sort</Form.Label>
-          <Form.Select value={sort} onChange={e=>emit({sort:e.target.value})}>
+          <Form.Select value={sort} onChange={e=>push({sort:e.target.value})}>
             <option value="">None</option>
             <option value="asc">Low&nbsp;→&nbsp;High</option>
             <option value="desc">High&nbsp;→&nbsp;Low</option>
@@ -144,18 +167,20 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
         <Col md={2}>
           <Form.Label className="mb-1">Min&nbsp;Price&nbsp;(BHD)</Form.Label>
           <Form.Control
-            type="number" min="0"
-            value={minP === '' ? '' : minP}
-            onChange={e=>emit({minP:e.target.value})}
+            type="number" 
+            min="0"
+            value={minP}
+            onChange={ e => push({minP : e.target.value})}
           />
         </Col>
 
         <Col md={2}>
           <Form.Label className="mb-1">Max&nbsp;Price&nbsp;(BHD)</Form.Label>
           <Form.Control
-            type="number" min="0"
+            type="number" 
+            min="0"
             value={maxP}
-            onChange={e=>emit({maxP:e.target.value})}
+            onChange={ e => push({ maxP : e.target.value })}
           />
         </Col>
 

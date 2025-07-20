@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Row, Col, Spinner, Card } from "react-bootstrap";
 import Spkcardscomponent from "@/shared/@spk-reusable-components/reusable-dashboards/spk-cards";
 import Link from "next/link";
+import Image from "next/image"
 
 /* ---------- response shapes ---------- */
 export type VolumePoint = { period_start: string; volume_bhd: string };
@@ -126,7 +127,15 @@ const FirmStatsCards: React.FC<Props> = ({ firmId }) => {
   }, [firmId]);
 
   if (loading) return (
-    <Row className="mb-3"><Col className="text-center"><Spinner animation="border" /></Col></Row>
+    <Row className="mb-3">
+                <Image
+                    src="/assets/images/media/loader.svg"
+                    width={64}
+                    height={64}
+                    alt="Loading…"
+                    priority
+                  />
+    </Row>
   );
 
   return (
