@@ -20,6 +20,7 @@
     "@mui/material": "^7.0.2",
     "@reduxjs/toolkit": "^2.3.0",
     "@simonwep/pickr": "^1.9.1",
+    "@turf/turf": "^7.2.0",
     "@types/mapbox-gl": "^3.4.1",
     "@types/react-map-gl": "^6.1.7",
     "apexcharts": "^3.54.1",
@@ -49,6 +50,7 @@
     "simplebar-react": "^3.3.0",
     "suneditor-react": "^3.6.1",
     "sweetalert2": "^11.19.1",
+    "turf": "^3.0.14",
     "yup": "^1.4.0"
   },
   "devDependencies": {
