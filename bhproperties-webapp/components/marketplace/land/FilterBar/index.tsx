@@ -35,6 +35,7 @@ const FilterBar: React.FC<Props> = ({ options, onApply }) => {
     if ('maxA' in next) setMaxA(next.maxA!);
 
     const f: Record<string,string> = { status:'listed' };
+    
     if (state.nzp ) f.nzp_code    = state.nzp;
     if (state.gov ) f.governorate = state.gov;
     if (state.loc ) f.location    = state.loc;

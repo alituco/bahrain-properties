@@ -302,7 +302,7 @@ export default function FirmPropertiesPage() {
                     <tr key={row.id}>
                       <td>
                         <Link
-                          href={`/property/${row.parcel_no}`}
+                          href={`/dashboard/property/${row.parcel_no}`}
                           className="text-blue hover:underline"
                         >
                           {row.id}
