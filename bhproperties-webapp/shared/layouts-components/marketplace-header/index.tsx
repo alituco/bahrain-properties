@@ -19,7 +19,7 @@ const MarketplaceHeader: React.FC = () => {
           borderBottom: "1px solid #e5e5e5",
           display: "flex",
           justifyContent: "space-between",
-          // alignItems: "center",
+          alignItems: "center",
           padding: "1em 3em",
           zIndex: 999,
         }}
