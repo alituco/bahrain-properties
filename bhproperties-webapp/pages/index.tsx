@@ -110,7 +110,7 @@ const Marketplace: PageWithLayout = () => {
             <Col lg={6}>
               <h2 className="fw-bold mb-3">Are you a Real-Estate Professional?</h2>
               <p className="lead mb-0">
-                Join <span className="text-warning fw-semibold">PMS Bahrain</span>{" "}
+                Join <span className="text-warning fw-semibold">Manzil</span>{" "}
                 and showcase your listings to thousands of buyers &amp; investors every day.
               </p>
             </Col>
