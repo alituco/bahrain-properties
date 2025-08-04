@@ -5,15 +5,29 @@ import Link from "next/link";
 import { basePath } from "@/next.config";
 
 const MarketplaceHeader: React.FC = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <>
-      {/* ---------- top bar ---------- */}
-      <header className="marketplace-header">
-        {/* logo */}
+      {/* ─────────── TOP BAR ─────────── */}
+      <header
+        className="mh-wrap"
+        style={{
+          width: "100%",
+          background: "#ffffff",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
+          borderBottom: "1px solid #e5e5e5",
+          display: "flex",
+          justifyContent: "space-between",
+          // alignItems: "center",
+          padding: "1em 3em",
+          zIndex: 999,
+        }}
+      >
+        {/* logo (left) */}
         <Link href="/" style={{ display: "flex", alignItems: "center" }}>
           <img
+            className="mh-logo"
             src={`${
               process.env.NODE_ENV === "production" ? basePath : ""
             }/assets/images/brand-logos/desktop-white.png`}
@@ -22,17 +36,15 @@ const MarketplaceHeader: React.FC = () => {
           />
         </Link>
 
-        <div style={{ flex: 1 }} />
-
-        {/* desktop nav */}
-        <nav className="desktop-nav">
+        {/* desktop links (right) */}
+        <nav className="mh-links">
           <Link
             href="/firms"
             style={{
-              fontSize: "20px",
-              fontWeight: 600,
+              fontSize: "15px",
+              fontWeight: 500,
               textDecoration: "none",
-              marginRight: "28px",
+              marginRight: "18px",
             }}
           >
             Browse&nbsp;Firms
@@ -41,11 +53,11 @@ const MarketplaceHeader: React.FC = () => {
           <Link
             href="/login"
             style={{
-              fontSize: "20px",
-              fontWeight: 700,
-              color: "#ffffff",
-              backgroundColor: "#ff6a00",
-              padding: "10px 28px",
+              fontSize: "15px",
+              fontWeight: 500,
+              color: "red",
+              border: "1px solid black",
+              padding: "10px 20px",
               borderRadius: "6px",
               textDecoration: "none",
               display: "inline-block",
@@ -55,140 +67,100 @@ const MarketplaceHeader: React.FC = () => {
           </Link>
         </nav>
 
-        {/* hamburger (mobile only) */}
+        {/* hamburger (right / mobile only) */}
         <button
-          aria-label="Open menu"
-          className="mobile-toggle"
-          onClick={() => setMenuOpen(true)}
+          className="mh-burger"
+          onClick={() => setOpen(!open)}
+          aria-label="Toggle menu"
         >
-          &#9776;
+          <span />
+          <span />
+          <span />
         </button>
       </header>
 
-      {/* ---------- mobile overlay ---------- */}
-      {menuOpen && (
+      {/* ─────────── DROPDOWN (mobile) ─────────── */}
+      {open && (
         <div
-          className="mobile-overlay"
-          onClick={() => setMenuOpen(false)}
+          className="mh-dropdown"
+          style={{
+            background: "#ffffff",
+            borderBottom: "1px solid #e5e5e5",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
+            padding: "8px 16px 12px",
+            textAlign: "center",            // ⬅ center the links
+          }}
         >
-          <div
-            className="mobile-panel"
-            onClick={(e) => e.stopPropagation()}
+          <Link
+            href="/firms"
+            style={{
+              display: "block",
+              fontSize: "15px",
+              fontWeight: 500,
+              textDecoration: "none",
+              margin: "0 auto 10px",
+            }}
+            onClick={() => setOpen(false)}
           >
-            <button
-              aria-label="Close menu"
-              className="close-btn"
-              onClick={() => setMenuOpen(false)}
-            >
-              &times;
-            </button>
+            Browse&nbsp;Firms
+          </Link>
 
-            <Link
-              href="/firms"
-              className="mobile-link"
-              onClick={() => setMenuOpen(false)}
-            >
-              Browse Firms
-            </Link>
-
-            <Link
-              href="/login"
-              className="mobile-btn"
-              onClick={() => setMenuOpen(false)}
-            >
-              Realtor Login
-            </Link>
-          </div>
+          <Link
+            href="/login"
+            style={{
+              display: "inline-block",
+              fontSize: "15px",
+              fontWeight: 500,
+              color: "red",
+              border: "1px solid black",
+              padding: "8px 16px",
+              borderRadius: "6px",
+              textDecoration: "none",
+            }}
+            onClick={() => setOpen(false)}
+          >
+            Realtor&nbsp;Login
+          </Link>
         </div>
       )}
 
-      {/* ---------- styles ---------- */}
+      {/* ─────────── INLINE STYLES / MEDIA QUERIES ─────────── */}
       <style jsx>{`
-        /* --- header --- */
-        .marketplace-header {
-          width: 100%;
-          background: #ffffff;
-          border-bottom: 1px solid #e5e5e5;
-          display: flex;
-          align-items: center;
-          padding: 12px 24px;
-          z-index: 999;
+        @media (max-width: 640px) {
+          .mh-wrap {
+            padding: 10px; !important
+          }
+          .mh-logo {
+            height: 40px !important;
+          }
+          .mh-links {
+            display: none !important;        /* hide desktop links */
+          }
+          .mh-burger {
+            display: inline-flex !important;
+          }
         }
-
-        /* --- desktop nav hidden on small screens --- */
-        .desktop-nav {
-          display: flex;
-          align-items: center;
+        @media (min-width: 641px) {
+          .mh-burger,
+          .mh-dropdown {
+            display: none !important;
+          }
         }
-
-        /* --- hamburger hidden on desktop --- */
-        .mobile-toggle {
-          font-size: 32px;
+        .mh-burger {
           background: none;
           border: none;
+          padding: 10px;
           cursor: pointer;
-          display: none;
-        }
-
-        /* --- overlay --- */
-        .mobile-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.65);
-          display: flex;
+          flex-direction: column;
           justify-content: center;
           align-items: center;
-          z-index: 1000;
         }
-        .mobile-panel {
-          background: #ffffff;
-          width: 85%;
-          max-width: 320px;
-          padding: 32px 24px;
-          border-radius: 8px;
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
-          gap: 24px;
-        }
-        .close-btn {
-          align-self: flex-end;
-          font-size: 36px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          line-height: 1;
-        }
-        .mobile-link {
-          font-size: 20px;
-          font-weight: 600;
-          color: #0050c8;
-          text-decoration: none;
-          text-align: center;
-        }
-        .mobile-btn {
-          font-size: 20px;
-          font-weight: 700;
-          color: #ffffff;
-          background: #ff6a00;
-          padding: 12px 0;
-          border-radius: 6px;
-          text-align: center;
-          text-decoration: none;
-        }
-
-        /* --- responsive rules --- */
-        @media (max-width: 768px) {
-          .desktop-nav {
-            display: none;
-          }
-          .mobile-toggle {
-            display: block;
-          }
-          /* shrink header padding for narrow screens */
-          .marketplace-header {
-            padding: 12px 16px;
-          }
+        .mh-burger span {
+          display: block;
+          width: 24px;
+          height: 2px;
+          background: #000;
+          margin: 4px 0;
         }
       `}</style>
     </>
