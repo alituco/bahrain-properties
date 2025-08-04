@@ -50,7 +50,7 @@ const Marketplace: PageWithLayout = () => {
 
   return (
     <Fragment>
-      <Seo title="Marketplace" />
+      <Seo title="Find your new Property" />
 
       <HeroSearch />
 

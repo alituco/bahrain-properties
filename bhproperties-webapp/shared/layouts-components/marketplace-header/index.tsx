@@ -21,10 +21,10 @@ const MarketplaceHeader: React.FC = () => {
 
           <Link href="/" className="header-logo d-flex align-items-center me-3">
             <img
-              height={34}
+              height={50}
               alt="Logo"
               className="desktop-dark"
-              src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-dark.png`}
+              src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-white.png`}
             />
           </Link>
 
@@ -59,9 +59,9 @@ const MarketplaceHeader: React.FC = () => {
             <div className="overlay-header d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
               <Link href="/" className="d-flex align-items-center">
                 <img
-                  height={30}
+                  height={50}
                   alt="Logo"
-                  src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-dark.png`}
+                  src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/desktop-white.png`}
                 />
               </Link>
               <button

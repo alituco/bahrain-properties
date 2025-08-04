@@ -1,6 +1,6 @@
 import React from "react";
 import Head from "next/head";
-import favicon from "../../../public/favicon.ico";
+import favicon from "../../../public/logo.png";
 const Seo = ({ title }:any) => {
 	let i = `Manzil - ${title}`;
 	return (
