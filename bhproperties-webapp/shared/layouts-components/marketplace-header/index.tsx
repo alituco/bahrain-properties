@@ -17,6 +17,7 @@ const MarketplaceHeader: React.FC = () => (
       width: "100%",
       background: "#ffffff",
       boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
+      borderBottom: "1px solid #e5e5e5",
       display: "flex",
       alignItems: "center",
       padding: "7px 100px",
