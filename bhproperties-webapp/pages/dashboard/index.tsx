@@ -47,7 +47,7 @@ const Sales = () => {
         const { user } = await res.json();
         if (!cancelled) setUser(user);
       } catch (e) {
-        if (!cancelled) router.replace("/");   
+        if (!cancelled) router.replace("/login");   
       } finally {
         if (!cancelled) setLoading(false);     
       }

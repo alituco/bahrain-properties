@@ -1,14 +1,14 @@
 import React from "react";
 import Head from "next/head";
-import favicon from "../../../public/favicon.ico";
+import favicon from "../../../public/logo.png";
 const Seo = ({ title }:any) => {
-	let i = `PMS - ${title}`;
+	let i = `Manzil - ${title}`;
 	return (
 		<Head>
 			<title>{i}</title>
 			<link href={favicon.src} rel="icon"></link>
-			<meta name="description" content="Property Management System" />
-			<meta name="author" content="PMS Bahrain" />
+			<meta name="description" content="Manzil: where buyers meet listings and realtors run their business." />
+			<meta name="author" content="Manzil" />
 			<meta name="keywords" content="react bootstrap dashboard
 admin dashboard template
 react nextjs admin template
