@@ -173,7 +173,7 @@ export const requestEmailChange: RequestHandler = async (req, res) => {
     );
 
     await sendMail({
-      from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
+      from: `"Manzil" <${process.env.MAILGUN_FROM}>`,
       to: new_email,
       subject: 'Confirm your new e-mail',
       text: `Your OTP is ${otp}`,

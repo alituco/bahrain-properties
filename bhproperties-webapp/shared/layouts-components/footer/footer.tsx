@@ -8,7 +8,7 @@ const Footer = () => {
       <footer className="footer mt-auto py-3 bg-white text-center">
         <div className="container">
           <span className="text-muted"> Copyright © <span id="year"> 2025 </span>
-            <span className="fw-medium text-primary"><Link href="https://spruko.com/" target='_blank'  > PMS Bahrain </Link></span> All rights reserved
+            <span className="fw-medium text-primary"><Link href="https://spruko.com/" target='_blank'  > Manzil </Link></span> All rights reserved
           </span>
         </div>
       </footer>
