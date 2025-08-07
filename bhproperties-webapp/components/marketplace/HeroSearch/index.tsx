@@ -9,7 +9,7 @@ const HeroSearch: React.FC = () => {
   const router = useRouter();
 
   const go = (kind: AssetKind) => {
-    router.push(`/marketplace/${kind}`);
+    router.push(`${kind}`);
   };
 
   return (
