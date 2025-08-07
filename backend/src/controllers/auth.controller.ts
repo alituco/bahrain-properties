@@ -57,7 +57,7 @@ export const login: RequestHandler = async (req, res) => {
       [u.rows[0].user_id, otp]
     );
     await sendMail({
-      from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
+      from: `"Manzil" <${process.env.MAILGUN_FROM}>`,
       to: email,
       subject: "Login OTP",
       text: `Your OTP is ${otp}`,
@@ -96,7 +96,7 @@ export const resendLoginOTP: RequestHandler = async (req, res) => {
     );
 
     await sendMail({
-      from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
+      from: `"Manzil" <${process.env.MAILGUN_FROM}>`,
       to: email,
       subject: "New login OTP",
       text: `Your new OTP is ${otp}`,
@@ -215,7 +215,7 @@ export const register: RequestHandler = async (req, res) => {
     res.cookie("reg_id", regId.toString(), { httpOnly: false, maxAge: 9 * 60 * 1000 });
 
     await sendMail({
-      from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
+      from: `"Manzil" <${process.env.MAILGUN_FROM}>`,
       to: email,
       subject: "Complete Registration",
       text: `Your OTP is ${otp}, valid for 15 minutes.`,
@@ -299,7 +299,7 @@ export const resendRegisterOTP: RequestHandler = async (req,res)=>{
         WHERE id=$2`, [otp, reg_id]
     );
     await sendMail({
-      from: `"NPS Bahrain" <${process.env.MAILGUN_FROM}>`,
+      from: `"Manzil" <${process.env.MAILGUN_FROM}>`,
       to: emailQ.rows[0].email,
       subject: "New OTP",
       text: `Your new OTP is ${otp}`,
