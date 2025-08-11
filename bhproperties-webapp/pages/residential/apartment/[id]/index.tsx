@@ -104,21 +104,24 @@ export default function ApartmentDetailPage() {
         <Card
           className="shadow-sm overflow-hidden"
           style={{
-            width      : 'min(96%, 1200px)',   
+            width      : 'min(92%, 1000px)',   
             borderRadius: '1rem',
-            marginTop  : '7rem',
+            marginTop  : '1rem',
           }}
         >
           {/* photos ------------------------------------------------ */}
           {images.length ? (
             <Carousel controls={images.length > 1} indicators={false} interval={null}>
               {images.map((u, i) => (
-                <Carousel.Item key={i}>
-                  <div className="ratio ratio-16x9">
-                    <img src={u} alt={`photo ${i + 1}`}
-                         className="d-block w-100 h-100 object-fit-cover" />
-                  </div>
-                </Carousel.Item>
+              <Carousel.Item key={i}>
+                <div className="ratio ratio-16x9">
+                  <img
+                    src={u}
+                    alt={`photo ${i + 1}`}
+                    className="img-fluid w-100 h-100 object-fit-cover"
+                  />
+                </div>
+              </Carousel.Item>
               ))}
             </Carousel>
           ) : (

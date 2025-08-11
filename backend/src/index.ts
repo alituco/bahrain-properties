@@ -22,6 +22,8 @@ import apartmentMarketplaceRoutes from './routes/marketplace/apartments.routes'
 import housesMarketplaceRoutes from './routes/marketplace/house.routes'
 import residentialMarketplaceRoutes from './routes/marketplace/listedResidential.routes';
 
+import marketplaceFirmRoutes from './routes/marketplace/firms/firms.routes';
+
 const app = express();
 
 // CORS
@@ -62,6 +64,8 @@ app.use('/marketplace/residential', residentialMarketplaceRoutes);
 app.use('/land', listedLandRoutes);
 app.use('/marketplace/apartments', apartmentMarketplaceRoutes)
 app.use('/marketplace/houses', housesMarketplaceRoutes)
+
+app.use('/marketplace/firms', marketplaceFirmRoutes);
 
 app.listen(Number(config.port), '0.0.0.0', () => {
   console.log(`Server running on port ${config.port}`);

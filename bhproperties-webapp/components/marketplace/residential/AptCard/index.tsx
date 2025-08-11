@@ -11,7 +11,7 @@ const AptCard: React.FC<{ apartment: Apartment }> = ({ apartment: a }) => {
       ? `${(a.asking_price ?? 0).toLocaleString()} BHD`
       : `${(a.rent_price ?? 0).toLocaleString()} BHD/mo`;
 
-  const href = `/marketplace/residential/apartment/${a.id}`;
+  const href = `/residential/apartment/${a.id}`;
 
   const media = a.images.length ? (
     <Carousel

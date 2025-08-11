@@ -115,20 +115,24 @@ const HouseDetailPage = () => {
       <Seo title={house.title ?? 'House'} />
 
       {/* ───── Hero (photos + quick pills) ─────────────────────── */}
-      <Container fluid className="pt-5 px-0 d-flex justify-content-center">
+      <Container fluid className="pt-5 px-0 d-flex justify-content-center ">
         <Card className="shadow-sm overflow-hidden"
-              style={{ width:'min(92%, 1000px)', borderRadius:'1rem', marginTop:'7rem' }}>
+              style={{ width:'min(92%, 1000px)', borderRadius:'1rem', marginTop:'1rem' }}>
 
           {/* photos ------------------------------------------------ */}
           {imgs.length ? (
-            <Carousel controls={imgs.length>1} indicators={false} interval={null}>
+            <Carousel controls={imgs.length>1} indicators={false} interval={null} >
               {imgs.map((u,i)=>(
-                <Carousel.Item key={i}>
-                  <div className="ratio ratio-16x9">
-                    <img src={u} alt={`photo ${i+1}`}
-                         className="d-block w-100 h-100 object-fit-cover"/>
-                  </div>
-                </Carousel.Item>
+              <Carousel.Item key={i}>
+                <div className="ratio ratio-16x9">
+                  <img
+                    src={u}
+                    alt={`photo ${i + 1}`}
+                    className="img-fluid w-100 h-100 object-fit-cover"
+                  />
+                </div>
+              </Carousel.Item>
+
               ))}
             </Carousel>
           ) : (
