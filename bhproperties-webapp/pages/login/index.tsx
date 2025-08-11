@@ -39,7 +39,7 @@ export default function HomePage() {
             <AuthWidget />
           </Col>
         </div>
-      </div>
+      </div>  
     </>
   );
 }

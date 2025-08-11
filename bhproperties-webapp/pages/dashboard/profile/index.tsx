@@ -12,17 +12,19 @@ import PasswordForm   from "@/components/profile-settings/PasswordForm";
 import ConfirmDialog  from "@/components/profile-settings/ConfirmDialog";
 import OtpDialog      from "@/components/profile-settings/OtpDialog";
 import MessageFooter  from "@/components/profile-settings/MessageFooter";
+import FirmLogoForm   from "@/components/profile-settings/FirmLogoForm";      
 
-const API = process.env.NEXT_PUBLIC_API_URL; 
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 type Role = "admin" | "staff";
 
 interface User {
-  user_id: number;
-  email: string;
-  role: Role;
-  firm_id: number;
+  user_id : number;
+  email   : string;
+  role    : Role;
+  firm_id : number;
   firm_registration_code?: string | null;
+  firm_logo_url?        : string | null;                                      
 }
 
 const Profile = () => {
@@ -31,9 +33,9 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [user,    setUser]    = useState<User | null>(null);
 
+  /* ---------- fetch current-user -------------------------------- */
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       try {
         const res = await fetch(`${API}/user/me`, { credentials: "include" });
@@ -46,39 +48,38 @@ const Profile = () => {
         if (!cancelled) setLoading(false);
       }
     })();
-
     return () => { cancelled = true };
   }, []);
 
-  // Form field states
-  const [email, setEmail]           = useState("");
-  const [firmCode, setFirmCode]     = useState("");
-  const [currentPw, setCurrentPw]   = useState("");
-  const [newPw, setNewPw]           = useState("");
-  const [confirmPw, setConfirmPw]   = useState("");
+  /* ---------- form states -------------------------------------- */
+  const [email, setEmail]         = useState("");
+  const [firmCode, setFirmCode]   = useState("");
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw]         = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [firmLogo, setFirmLogo]   = useState<string | null>(null);            // ← NEW
 
   useEffect(() => {
     if (user) {
       setEmail(user.email);
-      if (user.role === "admin" && user.firm_registration_code) {
+      if (user.role === "admin" && user.firm_registration_code)
         setFirmCode(user.firm_registration_code);
-      }
+      setFirmLogo(user.firm_logo_url ?? null);                                // ← NEW
     }
   }, [user]);
 
-  // Message states
+  /* ---------- flash messages ----------------------------------- */
   const [success, setSuccess] = useState<string | null>(null);
   const [error,   setError]   = useState<string | null>(null);
   const ok  = (m:string) => { setError(null);   setSuccess(m); };
   const bad = (m:string) => { setSuccess(null); setError(m);   };
 
-  // overlay (confirm action) states
+  /* ---------- dialog / overlay flags --------------------------- */
   const [confirmPwFlag, setConfirmPwFlag] = useState(false);
-  const [otpPhase, setOtpPhase]           = useState<"idle"|"sent">("idle");
+  const [otpPhase, setOtpPhase] = useState<"idle"|"sent">("idle");
   const [otpTargetEmail, setOtpTargetEmail] = useState("");
 
-  // api calls
-
+  /* ---------- API helpers -------------------------------------- */
   const saveFirmCode = async () => {
     const r = await fetch(
       `${API}/user/firms/${user!.firm_id}/registration-code`,
@@ -130,6 +131,7 @@ const Profile = () => {
     if (j.success) { setCurrentPw(""); setNewPw(""); setConfirmPw(""); }
   };
 
+  /* ================================================================= */
   return (
     <>
       {!loading && user && (
@@ -146,7 +148,7 @@ const Profile = () => {
 
           <Row className="mb-5">
             <Tab.Container defaultActiveKey="tab-profile">
-              {/* sidebar */}
+              {/* ---------- sidebar -------------------------------- */}
               <Col xl={3}>
                 <Card className="custom-card">
                   <Card.Body>
@@ -168,11 +170,13 @@ const Profile = () => {
                 </Card>
               </Col>
 
+              {/* ---------- main content --------------------------- */}
               <Col xl={9}>
                 <Card className="custom-card">
                   <Card.Body className="p-0">
                     <Tab.Content>
                       <Tab.Pane eventKey="tab-profile" className="p-4">
+                        {/* ----- Email / firm code form ---------- */}
                         <EmailForm
                           email={email}
                           setEmail={setEmail}
@@ -182,6 +186,15 @@ const Profile = () => {
                           requestOtp={requestEmailOtp}
                           saveCode={saveFirmCode}
                         />
+
+                        {/* ----- Firm logo uploader (admins) ----- */}
+                        {user.role === "admin" && (
+                          <FirmLogoForm
+                            firmId={user.firm_id}
+                            initialUrl={firmLogo}
+                            onUploaded={url => setFirmLogo(url)}
+                          />
+                        )}
                       </Tab.Pane>
 
                       <Tab.Pane eventKey="tab-security" className="p-4">
@@ -205,6 +218,7 @@ const Profile = () => {
             </Tab.Container>
           </Row>
 
+          {/* ---------- confirm + otp dialogs -------------------- */}
           {confirmPwFlag && (
             <ConfirmDialog
               text="Are you sure you want to change your password?"

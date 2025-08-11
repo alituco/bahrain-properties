@@ -110,7 +110,7 @@ export default function LandDetailPage() {
           style={{
             width: 'min(92%, 840px)',
             borderRadius: '1rem',
-            marginTop: '7rem',
+            marginTop: '1rem',
           }}
         >
           <MapThumb

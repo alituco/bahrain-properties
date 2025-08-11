@@ -39,7 +39,7 @@ const MarketplaceHeader: React.FC = () => {
         {/* desktop links (right) */}
         <nav className="mh-links">
           <Link
-            href="/firms"
+            href="/brokers"
             style={{
               fontSize: "15px",
               fontWeight: 500,
@@ -55,8 +55,8 @@ const MarketplaceHeader: React.FC = () => {
             style={{
               fontSize: "15px",
               fontWeight: 500,
-              color: "red",
-              border: "1px solid black",
+              color: "#1B365D",
+              border: "1px solid lightgray",
               padding: "10px 20px",
               borderRadius: "6px",
               textDecoration: "none",
@@ -92,7 +92,7 @@ const MarketplaceHeader: React.FC = () => {
           }}
         >
           <Link
-            href="/firms"
+            href="/brokers"
             style={{
               display: "block",
               fontSize: "15px",
@@ -111,7 +111,7 @@ const MarketplaceHeader: React.FC = () => {
               display: "inline-block",
               fontSize: "15px",
               fontWeight: 500,
-              color: "red",
+              color: "#1B365D",
               border: "1px solid black",
               padding: "8px 16px",
               borderRadius: "6px",
