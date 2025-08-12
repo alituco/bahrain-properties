@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Card, Col, Nav, Row, Tab } from "react-bootstrap";
+import { Card, Col, Nav, Row, Tab, Form, Button, InputGroup } from "react-bootstrap";
 
 import Seo        from "@/shared/layouts-components/seo/seo";
 import Pageheader from "@/shared/layouts-components/page-header/pageheader";
@@ -12,7 +12,7 @@ import PasswordForm   from "@/components/profile-settings/PasswordForm";
 import ConfirmDialog  from "@/components/profile-settings/ConfirmDialog";
 import OtpDialog      from "@/components/profile-settings/OtpDialog";
 import MessageFooter  from "@/components/profile-settings/MessageFooter";
-import FirmLogoForm   from "@/components/profile-settings/FirmLogoForm";      
+import FirmLogoForm   from "@/components/profile-settings/FirmLogoForm";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -24,8 +24,13 @@ interface User {
   role    : Role;
   firm_id : number;
   firm_registration_code?: string | null;
-  firm_logo_url?        : string | null;                                      
+  firm_logo_url?        : string | null;
+  phone_number?         : string | null;
 }
+
+const COUNTRY_CODES = [
+  { value: "973", label: "BH +973" }, // default
+];
 
 const Profile = () => {
   const router = useRouter();
@@ -33,7 +38,6 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [user,    setUser]    = useState<User | null>(null);
 
-  /* ---------- fetch current-user -------------------------------- */
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -51,35 +55,65 @@ const Profile = () => {
     return () => { cancelled = true };
   }, []);
 
-  /* ---------- form states -------------------------------------- */
   const [email, setEmail]         = useState("");
   const [firmCode, setFirmCode]   = useState("");
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw]         = useState("");
   const [confirmPw, setConfirmPw] = useState("");
-  const [firmLogo, setFirmLogo]   = useState<string | null>(null);            // ← NEW
+  const [firmLogo, setFirmLogo]   = useState<string | null>(null);
 
+  // phone pieces
+  const [phoneCode, setPhoneCode]   = useState("973"); // dropdown default
+  const [phoneLocal, setPhoneLocal] = useState("");    // user types here
+  const [editPhone, setEditPhone]   = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
+
+  // keep a copy to reset on cancel
+  const [initialPhoneCode, setInitialPhoneCode]   = useState("973");
+  const [initialPhoneLocal, setInitialPhoneLocal] = useState("");
+
+  // hydrate form state when user loads
   useEffect(() => {
     if (user) {
       setEmail(user.email);
       if (user.role === "admin" && user.firm_registration_code)
         setFirmCode(user.firm_registration_code);
-      setFirmLogo(user.firm_logo_url ?? null);                                // ← NEW
+      setFirmLogo(user.firm_logo_url ?? null);
+
+      const raw = user.phone_number ?? "";
+      const digits = raw.replace(/[^\d]/g, "");
+      // default to Bahrain (973). If the stored number starts with 973, split it off.
+      if (digits.startsWith("973") && digits.length > 3) {
+        const local = digits.slice(3);
+        setPhoneCode("973");
+        setPhoneLocal(local);
+        setInitialPhoneCode("973");
+        setInitialPhoneLocal(local);
+      } else if (digits.length) {
+        // if not prefixed, assume it's a local number in Bahrain
+        setPhoneCode("973");
+        setPhoneLocal(digits);
+        setInitialPhoneCode("973");
+        setInitialPhoneLocal(digits);
+      } else {
+        // no phone on file → defaults
+        setPhoneCode("973");
+        setPhoneLocal("");
+        setInitialPhoneCode("973");
+        setInitialPhoneLocal("");
+      }
     }
   }, [user]);
 
-  /* ---------- flash messages ----------------------------------- */
   const [success, setSuccess] = useState<string | null>(null);
   const [error,   setError]   = useState<string | null>(null);
   const ok  = (m:string) => { setError(null);   setSuccess(m); };
   const bad = (m:string) => { setSuccess(null); setError(m);   };
 
-  /* ---------- dialog / overlay flags --------------------------- */
   const [confirmPwFlag, setConfirmPwFlag] = useState(false);
   const [otpPhase, setOtpPhase] = useState<"idle"|"sent">("idle");
   const [otpTargetEmail, setOtpTargetEmail] = useState("");
 
-  /* ---------- API helpers -------------------------------------- */
   const saveFirmCode = async () => {
     const r = await fetch(
       `${API}/user/firms/${user!.firm_id}/registration-code`,
@@ -131,7 +165,45 @@ const Profile = () => {
     if (j.success) { setCurrentPw(""); setNewPw(""); setConfirmPw(""); }
   };
 
-  /* ================================================================= */
+  const digitsOnlyLocal = useMemo(() => phoneLocal.replace(/[^\d]/g, ""), [phoneLocal]);
+  const normalizedPhone = useMemo(
+    () => `+${phoneCode}${digitsOnlyLocal}`,
+    [phoneCode, digitsOnlyLocal]
+  );
+
+  const phoneChanged =
+    phoneCode !== initialPhoneCode || digitsOnlyLocal !== initialPhoneLocal.replace(/[^\d]/g, "");
+
+  const phoneLooksValid = digitsOnlyLocal.length >= 7; // basic check
+
+  const savePhone = async () => {
+    try {
+      setSavingPhone(true);
+      const r = await fetch(`${API}/user/update-phone`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ phone_number: normalizedPhone }),
+      });
+      const j = await r.json();
+      if (!j.success) return bad(j.message);
+
+      ok("Phone number updated.");
+      setInitialPhoneCode(phoneCode);
+      setInitialPhoneLocal(digitsOnlyLocal);
+      setEditPhone(false);
+      if (user) setUser({ ...user, phone_number: j.phone_number });
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
+  const cancelPhoneEdit = () => {
+    setPhoneCode(initialPhoneCode);
+    setPhoneLocal(initialPhoneLocal);
+    setEditPhone(false);
+  };
+
   return (
     <>
       {!loading && user && (
@@ -148,7 +220,7 @@ const Profile = () => {
 
           <Row className="mb-5">
             <Tab.Container defaultActiveKey="tab-profile">
-              {/* ---------- sidebar -------------------------------- */}
+              {/* sidebar */}
               <Col xl={3}>
                 <Card className="custom-card">
                   <Card.Body>
@@ -170,13 +242,79 @@ const Profile = () => {
                 </Card>
               </Col>
 
-              {/* ---------- main content --------------------------- */}
+              {/* main */}
               <Col xl={9}>
                 <Card className="custom-card">
                   <Card.Body className="p-0">
                     <Tab.Content>
                       <Tab.Pane eventKey="tab-profile" className="p-4">
-                        {/* ----- Email / firm code form ---------- */}
+                        {/* Phone (dropdown for country code + input for local number) */}
+                        <Card className="mb-42 border">
+                          <Card.Body>
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                              <h6 className="fw-semibold mb-0">Phone Number</h6>
+
+                            </div>
+
+                            <Form
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                if (editPhone && phoneLooksValid && phoneChanged) savePhone();
+                              }}
+                            >
+                              <Form.Label className="small text-muted">Mobile</Form.Label>
+                              <InputGroup className="flex-nowrap">
+                                <Form.Select
+                                  value={phoneCode}
+                                  onChange={(e) => setPhoneCode(e.target.value)}
+                                  style={{ maxWidth: 140 }}
+                                  disabled={!editPhone || savingPhone}
+                                >
+                                  {COUNTRY_CODES.map(c => (
+                                    <option key={c.value} value={c.value}>
+                                      {c.label}
+                                    </option>
+                                  ))}
+                                </Form.Select>
+                                <Form.Control
+                                  type="tel"
+                                  value={phoneLocal}
+                                  onChange={(e) => setPhoneLocal(e.target.value)}
+                                  placeholder="3xxxxxxx"
+                                  disabled={!editPhone || savingPhone}
+                                />
+                                {!editPhone ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline-secondary"
+                                    onClick={() => setEditPhone(true)}
+                                  >
+                                    Edit
+                                  </Button>
+                                ) : (
+                                  <>
+                                    <Button
+                                      type="submit"
+                                      disabled={!phoneLooksValid || !phoneChanged || savingPhone}
+                                    >
+                                      {savingPhone ? "Saving…" : "Save"}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline-secondary"
+                                      onClick={cancelPhoneEdit}
+                                      disabled={savingPhone}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </>
+                                )}
+                              </InputGroup>
+                            </Form>
+                          </Card.Body>
+                        </Card>
+
+                        {/* Email / firm code */}
                         <EmailForm
                           email={email}
                           setEmail={setEmail}
@@ -187,7 +325,7 @@ const Profile = () => {
                           saveCode={saveFirmCode}
                         />
 
-                        {/* ----- Firm logo uploader (admins) ----- */}
+                        {/* Firm logo (admins) */}
                         {user.role === "admin" && (
                           <FirmLogoForm
                             firmId={user.firm_id}
@@ -218,7 +356,7 @@ const Profile = () => {
             </Tab.Container>
           </Row>
 
-          {/* ---------- confirm + otp dialogs -------------------- */}
+          {/* dialogs */}
           {confirmPwFlag && (
             <ConfirmDialog
               text="Are you sure you want to change your password?"
