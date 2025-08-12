@@ -23,7 +23,7 @@ const EmailForm = ({
   saveCode,
 }: Props) => (
   <Form onSubmit={(e) => e.preventDefault()}>
-    <Form.Group as={Row} className="mb-3">
+    <Form.Group as={Row} className="mb-3 px-4">
       <Form.Label column sm={3}>
         Email address
       </Form.Label>
@@ -39,7 +39,7 @@ const EmailForm = ({
 
     {role === "admin" && (
       <>
-        <Form.Group as={Row} className="mb-2">
+        <Form.Group as={Row} className="mb-2 px-4">
           <Form.Label column sm={3}>
             Firm registration code
           </Form.Label>

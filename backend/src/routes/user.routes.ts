@@ -10,6 +10,7 @@ import {
   requestEmailChange,
   verifyEmailChangeOTP,
   changePassword,
+  updatePhoneNumber,
 } from '../controllers/user.controller';
 
 import { requireAuth } from '../middleware/requireAuth';
@@ -47,6 +48,8 @@ router.post('/email-change/verify',  requireAuth, verifyEmailChangeOTP);
 
 /* ---------- password ------------------------------------------ */
 router.post('/change-password', requireAuth, changePassword);
+
+router.put('/update-phone', requireAuth, updatePhoneNumber);
 
 /* ---------- delete user (admin) ------------------------------- */
 router.delete(

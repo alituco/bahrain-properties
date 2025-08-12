@@ -8,7 +8,7 @@ import admin from 'firebase-admin';
 
 import { pool }              from '../config/db';
 import { config }            from '../config/env';
-import { bucket } from '../config/firebase';
+import { bucket }            from '../config/firebase';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 
 const mailgun = new Mailgun(FormData);
@@ -18,8 +18,7 @@ const mg      = mailgun.client({
   url: process.env.MAILGUN_API_URL || undefined,
 });
 
-/* ──────────────────────────────────────────────────────────────── */
-/* Helpers                                                         */
+/* helpers */
 function generateOTP(len = 6) {
   const d = '0123456789';
   return Array.from({ length: len }, () => d[(Math.random() * d.length) | 0]).join('');
@@ -37,7 +36,10 @@ export const getProfile: RequestHandler = async (req, res) => {
     const token =
       req.cookies?.token ||
       (req.headers.authorization && req.headers.authorization.split(' ')[1]);
-    if (!token) res.status(401).json({ success:false, message:'Not authenticated' });
+    if (!token) {
+      res.status(401).json({ success:false, message:'Not authenticated' });
+      return;
+    }
 
     const decoded: any = jwt.verify(token, config.jwtSecret);
     const { rows } = await pool.query(
@@ -45,22 +47,21 @@ export const getProfile: RequestHandler = async (req, res) => {
               u.first_name,
               u.last_name,
               u.email,
+              u.phone_number,             -- ▲ include phone
               u.real_estate_firm,
               u.role,
               u.firm_id,
-
-              /* admin-only registration code */
-              CASE WHEN u.role = 'admin' THEN f.login_code ELSE NULL END
-                AS firm_registration_code,
-
-              /* everyone can see logo */
+              CASE WHEN u.role = 'admin' THEN f.login_code ELSE NULL END AS firm_registration_code,
               f.logo_url AS firm_logo_url
          FROM users u
          JOIN firms f ON f.firm_id = u.firm_id
         WHERE u.user_id = $1`,
       [decoded.user_id]
     );
-    if (!rows.length) res.status(404).json({ success:false, message:'User not found' });
+    if (!rows.length) {
+      res.status(404).json({ success:false, message:'User not found' });
+      return;
+    }
 
     res.json({ success:true, user: rows[0] });
   } catch (e) {
@@ -70,14 +71,66 @@ export const getProfile: RequestHandler = async (req, res) => {
 };
 
 /* =================================================================
+   PUT /user/phone
+   body: { phone_number: string }
+================================================================= */
+export const updatePhoneNumber: RequestHandler = async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    if (!user) {
+      res.status(401).json({ success:false, message:'Not authenticated' });
+      return;
+    }
+
+    const { phone_number } = req.body as { phone_number?: string };
+    if (typeof phone_number !== 'string' || !phone_number.trim()) {
+      res.status(400).json({ success:false, message:'Phone number required' });
+      return;
+    }
+
+    // allow +, digits, spaces, dashes, parentheses
+    const cleaned = phone_number.trim();
+    const okFormat = /^[+\d][\d\s\-()]{5,}$/.test(cleaned);
+    if (!okFormat) {
+      res.status(400).json({ success:false, message:'Invalid phone format' });
+      return;
+    }
+
+    const q = await pool.query(
+      `UPDATE users
+          SET phone_number = $1
+        WHERE user_id = $2
+        RETURNING user_id, phone_number`,
+      [cleaned, user.user_id]
+    );
+
+    if (!q.rowCount) {
+      res.status(404).json({ success:false, message:'User not found' });
+      return;
+    }
+
+    res.json({ success:true, phone_number: q.rows[0].phone_number });
+  } catch (e) {
+    console.error('Error updating phone number:', e);
+    res.status(500).json({ success:false, message:'Server error' });
+  }
+};
+
+/* =================================================================
    PUT /firms/:firmId/registration-code
 ================================================================= */
 export const updateFirmRegistrationCode: RequestHandler = async (req, res) => {
   const { user } = req as AuthenticatedRequest;
-  if (user!.role !== 'admin') res.status(403).json({ success:false, message:'Forbidden' });
+  if (user!.role !== 'admin') {
+    res.status(403).json({ success:false, message:'Forbidden' });
+    return;
+  }
 
   const { new_code } = req.body;
-  if (!new_code) res.status(400).json({ success:false, message:'Code required' });
+  if (!new_code) {
+    res.status(400).json({ success:false, message:'Code required' });
+    return;
+  }
 
   try {
     const { rows } = await pool.query(
@@ -102,6 +155,7 @@ export const updateFirmLogo: RequestHandler = async (req, res) => {
     const { user } = req as AuthenticatedRequest;
     if (user!.role !== 'admin') {
       res.status(403).json({ success: false, message: 'Forbidden' });
+      return;
     }
 
     if (!req.file) {
@@ -120,13 +174,11 @@ export const updateFirmLogo: RequestHandler = async (req, res) => {
 
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${destPath}`;
 
-    // 1️⃣ Update Postgres
     await pool.query(
       `UPDATE firms SET logo_url = $1 WHERE firm_id = $2`,
       [publicUrl, user!.firm_id]
     );
 
-    // 2️⃣ Update Firestore
     await admin.firestore()
       .collection('firm_logos')
       .doc(String(user!.firm_id))
@@ -143,7 +195,7 @@ export const updateFirmLogo: RequestHandler = async (req, res) => {
 };
 
 /* =================================================================
-   GET /firms/:firmId/users  (staff listing)
+   GET /firms/:firmId/users
 ================================================================= */
 export const getUsersByFirm: RequestHandler = async (req, res, next) => {
   try {
@@ -151,11 +203,7 @@ export const getUsersByFirm: RequestHandler = async (req, res, next) => {
     const firmName = user!.real_estate_firm;
 
     const { rows } = await pool.query(
-      `SELECT user_id,
-              first_name,
-              last_name,
-              email,
-              role
+      `SELECT user_id, first_name, last_name, email, role
          FROM users
         WHERE real_estate_firm = $1
         ORDER BY last_name, first_name`,
@@ -166,40 +214,50 @@ export const getUsersByFirm: RequestHandler = async (req, res, next) => {
 };
 
 /* =================================================================
-   DELETE /users/:userId  (admin only)
+   DELETE /users/:userId
 ================================================================= */
 export const deleteUser: RequestHandler = async (req, res, next) => {
   try {
-    const admin = (req as AuthenticatedRequest).user!;
-    if (admin.role !== 'admin')
+    const adminUser = (req as AuthenticatedRequest).user!;
+    if (adminUser.role !== 'admin') {
       res.status(403).json({ message:'Forbidden' });
+      return;
+    }
 
     const { userId } = req.params;
     const { rows } = await pool.query(
       `DELETE FROM users
          WHERE user_id = $1 AND firm_id = $2
          RETURNING user_id, email`,
-      [userId, admin.firm_id]
+      [userId, adminUser.firm_id]
     );
-    if (!rows.length) res.status(404).json({ message:'User not found' });
+    if (!rows.length) {
+      res.status(404).json({ message:'User not found' });
+      return;
+    }
 
     res.json({ message:'User deleted', user:rows[0] });
   } catch (err) { next(err); }
 };
 
 /* =================================================================
-   POST /email-change/request  &  /verify
+   POST /user/email-change/request
 ================================================================= */
 export const requestEmailChange: RequestHandler = async (req, res) => {
   const { new_email } = req.body;
   const { user } = req as AuthenticatedRequest;
 
-  if (!new_email) res.status(400).json({ success:false, message:'New e-mail required' });
+  if (!new_email) {
+    res.status(400).json({ success:false, message:'New e-mail required' });
+    return;
+  }
 
   try {
     const dup = await pool.query(`SELECT 1 FROM users WHERE email=$1`, [new_email]);
-    if (dup.rowCount)
+    if (dup.rowCount) {
       res.status(400).json({ success:false, message:'E-mail already in use' });
+      return;
+    }
 
     const otp = generateOTP();
     await pool.query(
@@ -226,11 +284,16 @@ export const requestEmailChange: RequestHandler = async (req, res) => {
   }
 };
 
+/* =================================================================
+   POST /user/email-change/verify
+================================================================= */
 export const verifyEmailChangeOTP: RequestHandler = async (req, res) => {
   const { otp, new_email } = req.body;
   const { user } = req as AuthenticatedRequest;
-  if (!otp || !new_email)
+  if (!otp || !new_email) {
     res.status(400).json({ success:false, message:'OTP & e-mail required' });
+    return;
+  }
 
   try {
     const chk = await pool.query(
@@ -241,8 +304,10 @@ export const verifyEmailChangeOTP: RequestHandler = async (req, res) => {
         RETURNING id`,
       [user!.user_id, new_email, otp]
     );
-    if (!chk.rowCount)
+    if (!chk.rowCount) {
       res.status(400).json({ success:false, message:'OTP invalid/expired' });
+      return;
+    }
 
     await pool.query(`UPDATE users SET email=$1 WHERE user_id=$2`, [new_email, user!.user_id]);
     res.json({ success:true, message:'E-mail updated' });
@@ -253,7 +318,7 @@ export const verifyEmailChangeOTP: RequestHandler = async (req, res) => {
 };
 
 /* =================================================================
-   POST /change-password
+   POST /user/change-password
 ================================================================= */
 export const changePassword: RequestHandler = async (req, res) => {
   const { current_password, new_password } = req.body;
@@ -261,8 +326,10 @@ export const changePassword: RequestHandler = async (req, res) => {
 
   try {
     const u = await pool.query(`SELECT password FROM users WHERE user_id=$1`, [user!.user_id]);
-    if (!u.rowCount || !(await bcrypt.compare(current_password, u.rows[0].password)))
+    if (!u.rowCount || !(await bcrypt.compare(current_password, u.rows[0].password))) {
       res.status(400).json({ success:false, message:'Current password wrong' });
+      return;
+    }
 
     const hash = await bcrypt.hash(new_password, 10);
     await pool.query(`UPDATE users SET password=$1 WHERE user_id=$2`, [hash, user!.user_id]);
