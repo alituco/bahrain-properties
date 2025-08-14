@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Fragment, useEffect, useRef, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
@@ -11,6 +11,8 @@ import {
   Row,
   Spinner,
   Button as BsButton,
+  Form,
+  InputGroup,
 } from 'react-bootstrap';
 import Image from 'next/image';
 import Swal from 'sweetalert2';
@@ -26,47 +28,51 @@ const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
 });
 
+/* ─────────────────────────────────────────────────────────────── */
 interface FirmProperty {
   id: number;
   parcel_no: string;
   area_namee: string;
   block_no: string;
-  status: string;
+  status: string;                  // includes 'saved'
   asking_price: number | null;
   updated_at: string;
   longitude: number;
   latitude: number;
+  shape_area?: number | null;      // land size (m²)
 }
 
 interface UserProfile {
   role: string;
 }
 
+/* ─────────────────────────────────────────────────────────────── */
 export default function FirmPropertiesPage() {
   const router = useRouter();
   const API = process.env.NEXT_PUBLIC_API_URL!;
+
   const [rows, setRows] = useState<FirmProperty[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ text: string; variant: string } | null>(
-    null,
-  );
+  const [toast, setToast] = useState<{ text: string; variant: string } | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [areas, setAreas] = useState<string[]>([]);
   const [showFilter, setShowFilter] = useState(false);
   const [flyTo, setFlyTo] = useState<{ lat: number; lon: number } | null>(null);
+
+  // server-side filters applied via modal
   const [filters, setFilters] = useState<Record<string, string>>({});
+  // client-side search on the fetched set
+  const [searchText, setSearchText] = useState('');
+  const [appliedQuery, setAppliedQuery] = useState('');
 
   const mapSectionRef = useRef<HTMLDivElement>(null);
-  const statusFilter = filters.status ?? 'all';
 
-  const smoothScrollTo = (
-    el: HTMLElement,
-    duration = 800,
-    offsetPx = 100,
-  ) => {
+  const statusForMap = (filters.status ?? 'all') as string;
+
+  const smoothScrollTo = (el: HTMLElement, duration = 800, offsetPx = 100) => {
     const startY = window.scrollY;
     const targetY = el.getBoundingClientRect().top + startY - offsetPx;
     const distance = targetY - startY;
@@ -81,6 +87,7 @@ export default function FirmPropertiesPage() {
     window.requestAnimationFrame(step);
   };
 
+  /* ───────── auth ───────── */
   useEffect(() => {
     (async () => {
       try {
@@ -94,6 +101,7 @@ export default function FirmPropertiesPage() {
     })();
   }, [API, router]);
 
+  /* ───────── load areas ───────── */
   const loadAreas = async () => {
     const res = await fetch(`${API}/propertyFilters/areas`, {
       credentials: 'include',
@@ -102,19 +110,20 @@ export default function FirmPropertiesPage() {
     setAreas(areaNames);
   };
 
+  /* ───────── load rows (server-side filters only) ───────── */
   const loadRows = async (f: Record<string, string> = {}) => {
     try {
       setLoading(true);
       const qs = new URLSearchParams();
       if (f.block) qs.append('block_no', f.block);
       if (f.area) qs.append('area_namee', f.area);
-      if (f.status) qs.append('status', f.status);
+      if (f.status && f.status !== 'all') qs.append('status', f.status);
       if (f.minPrice) qs.append('minPrice', f.minPrice);
       if (f.maxPrice) qs.append('maxPrice', f.maxPrice);
-      const res = await fetch(
-        `${API}/firm-properties?${qs.toString()}`,
-        { credentials: 'include' },
-      );
+
+      const res = await fetch(`${API}/firm-properties?${qs.toString()}`, {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Fetch failed');
       const { firmProperties } = await res.json();
       setRows(firmProperties);
@@ -131,6 +140,7 @@ export default function FirmPropertiesPage() {
     loadRows();
   }, [API]);
 
+  /* ───────── modal apply/clear ───────── */
   const applyFilters = (f: Record<string, string>) => {
     setFilters(f);
     setShowFilter(false);
@@ -142,6 +152,7 @@ export default function FirmPropertiesPage() {
     loadRows({});
   };
 
+  /* ───────── delete row ───────── */
   const askDelete = (row: FirmProperty) => {
     if (!isAdmin) {
       Swal.fire({
@@ -183,12 +194,29 @@ export default function FirmPropertiesPage() {
     }
   };
 
+  /* ───────── client-side search on fetched rows ───────── */
+  const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const filteredRows = useMemo(() => {
+    const q = appliedQuery.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      return (
+        r.parcel_no.toLowerCase().includes(q) ||
+        (r.area_namee || '').toLowerCase().includes(q) ||
+        (r.block_no || '').toLowerCase().includes(q) ||
+        (r.status || '').toLowerCase().includes(q)
+      );
+    });
+  }, [rows, appliedQuery]);
+
+  /* ───────── pagination ───────── */
   const rowsPerPage = 10;
-  const totalPages = Math.ceil(rows.length / rowsPerPage) || 1;
+  const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
   const currentPage = Math.min(page, totalPages);
-  const pageRows = rows.slice(
+  const pageRows = filteredRows.slice(
     (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage,
+    currentPage * rowsPerPage
   );
 
   useEffect(() => {
@@ -200,6 +228,19 @@ export default function FirmPropertiesPage() {
       smoothScrollTo(mapSectionRef.current, 800, 120);
     }
   }, [flyTo]);
+
+  /* ───────── centered search actions ───────── */
+  const onSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAppliedQuery(searchText);
+    setPage(1);
+  };
+
+  const onSearchClear = () => {
+    setSearchText('');
+    setAppliedQuery('');
+    setPage(1);
+  };
 
   if (loading)
     return (
@@ -214,6 +255,7 @@ export default function FirmPropertiesPage() {
       </div>
     );
 
+  /* ───────────────────────────────────────────────────────────── */
   return (
     <Fragment>
       <Seo title="Firm Properties" />
@@ -228,11 +270,46 @@ export default function FirmPropertiesPage() {
           </SpkBreadcrumb>
           <h1 className="page-title fw-medium fs-18 mb-0">Firm Properties</h1>
         </div>
-        <Col className="text-end">
-          <BsButton variant="primary" onClick={() => setShowFilter(true)}>
-            <i className="ri-filter-3-line me-1" /> Filter
-          </BsButton>
-        </Col>
+        <div />
+      </div>
+
+      {/* Centered search row — only buttons are filled */}
+      <div className="d-flex justify-content-center my-3">
+        <div className="w-100" style={{ maxWidth: 980 }}>
+          <Form onSubmit={onSearchSubmit} className="w-100">
+            <div className="d-flex flex-wrap gap-2 align-items-stretch">
+              <div className="flex-grow-1">
+                <InputGroup className="shadow-sm">
+                  <InputGroup.Text className="bg-white border-end-0">
+                    <i className="ri-search-line" />
+                  </InputGroup.Text>
+                  <Form.Control
+                    placeholder="Search by parcel, area, block, or status…"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    aria-label="Search firm properties"
+                    className="border-start-0"
+                  />
+                </InputGroup>
+              </div>
+
+              <div className="d-flex gap-2">
+                <BsButton type="submit" variant="primary">
+                  Search
+                </BsButton>
+
+                <BsButton type="button" variant="outline-secondary" onClick={onSearchClear}>
+                  Clear
+                </BsButton>
+
+                <BsButton type="button" variant="secondary" onClick={() => setShowFilter(true)}>
+                  More Filters
+                </BsButton>
+
+              </div>
+            </div>
+          </Form>
+        </div>
       </div>
 
       {fetchError && (
@@ -258,6 +335,7 @@ export default function FirmPropertiesPage() {
         </SpkAlert>
       )}
 
+      {/* Filter modal — assumes FirmPropertyFilter handles Status (incl. Saved) */}
       <Modal
         show={showFilter}
         onHide={() => setShowFilter(false)}
@@ -277,11 +355,17 @@ export default function FirmPropertiesPage() {
         </Modal.Body>
       </Modal>
 
+      {/* Table */}
       <Row>
         <Col xl={12}>
           <Card className="custom-card">
             <Card.Header>
-              <div className="card-title">List</div>
+              <div className="card-title">
+                List{' '}
+                {appliedQuery ? (
+                  <span className="text-muted ms-2">({filteredRows.length} results)</span>
+                ) : null}
+              </div>
             </Card.Header>
             <Card.Body>
               <div className="table-responsive">
@@ -294,6 +378,7 @@ export default function FirmPropertiesPage() {
                     { title: 'Block' },
                     { title: 'Status' },
                     { title: 'Asking Price' },
+                    { title: 'Size (m²)' },           // land size
                     { title: 'Updated' },
                     { title: 'Action' },
                   ]}
@@ -312,12 +397,17 @@ export default function FirmPropertiesPage() {
                       <td>{row.block_no}</td>
                       <td>
                         <span className="badge bg-primary-transparent">
-                          {row.status}
+                          {titleCase(row.status)}
                         </span>
                       </td>
                       <td>
                         {row.asking_price != null
                           ? `${row.asking_price.toLocaleString()} BHD`
+                          : '--'}
+                      </td>
+                      <td>
+                        {row.shape_area != null
+                          ? Math.round(row.shape_area).toLocaleString()
                           : '--'}
                       </td>
                       <td>{new Date(row.updated_at).toLocaleDateString()}</td>
@@ -344,18 +434,12 @@ export default function FirmPropertiesPage() {
                             <span className="d-inline-block">
                               <SpkButton
                                 Size="sm"
-                                Buttonvariant={
-                                  isAdmin ? 'danger' : 'secondary-light'
-                                }
+                                Buttonvariant={isAdmin ? 'danger' : 'secondary-light'}
                                 Disabled={busyId === row.id || !isAdmin}
                                 onClickfunc={() => askDelete(row)}
                               >
                                 {busyId === row.id && (
-                                  <Spinner
-                                    animation="border"
-                                    size="sm"
-                                    className="me-1"
-                                  />
+                                  <Spinner animation="border" size="sm" className="me-1" />
                                 )}
                                 <i className="ri-delete-bin-line" />
                               </SpkButton>
@@ -368,6 +452,7 @@ export default function FirmPropertiesPage() {
                 </SpkTablescomponent>
               </div>
 
+              {/* Pagination */}
               {totalPages > 1 && (
                 <nav className="mt-3">
                   <ul className="pagination justify-content-center mb-0">
@@ -390,15 +475,11 @@ export default function FirmPropertiesPage() {
                       </li>
                     ))}
                     <li
-                      className={`page-item ${
-                        currentPage === totalPages ? 'disabled' : ''
-                      }`}
+                      className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}
                     >
                       <button
                         className="page-link"
-                        onClick={() =>
-                          setPage((p) => Math.min(totalPages, p + 1))
-                        }
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       >
                         Next »
                       </button>
@@ -411,6 +492,7 @@ export default function FirmPropertiesPage() {
         </Col>
       </Row>
 
+      {/* Map */}
       <div ref={mapSectionRef}>
         <Row className="mt-4">
           <Col xl={12}>
@@ -420,7 +502,7 @@ export default function FirmPropertiesPage() {
               </Card.Header>
               <Card.Body>
                 <MapContainer
-                  filters={{ status: statusFilter }}
+                  filters={{ status: statusForMap }} // 'saved' etc. comes from modal
                   flyTo={flyTo}
                   savedOnly
                 />

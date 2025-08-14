@@ -33,55 +33,97 @@ function validateBody(
   return null;
 }
 
-/* ────────────────────────────────────────────────────────────────── */
-/* GET /firm-properties/geojson                                      */
+/* GET /firm-properties/geojson  — returns ALL firm properties as a mixed GeoJSON */
 export const getFirmPropertiesGeojson: RequestHandler = async (req, res, next) => {
   try {
     const user = (req as AuthenticatedRequest).user;
-    if (!user) res.status(401).json({ message: "Unauthorized - No user context." });
+    if (!user) {
+      res.status(401).json({ message: "Unauthorized - No user context." });
+      return;
+    };
 
-    const { status } = req.query;
+    const status = (req.query.status as string | undefined)?.toLowerCase();
 
-    let sql = `
-      SELECT fp.parcel_no,
-             fp.status,
-             fp.asking_price,
-             fp.sold_price,
-             fp.title,
-             fp.description,
-             ST_AsGeoJSON(ST_Transform(p.geometry, 4326))  AS geojson,
-             ST_X(ST_Transform(ST_Centroid(p.geometry), 4326)) AS longitude,
-             ST_Y(ST_Transform(ST_Centroid(p.geometry), 4326)) AS latitude
-        FROM firm_properties fp
-   LEFT JOIN properties p ON fp.parcel_no = p.parcel_no
-       WHERE fp.firm_id = $1
-       AND fp.property_type = 'land'
-
+    // LAND (polygon) ----------------------------------------------------
+    const landSql = `
+      SELECT
+        fp.id AS fp_id,
+        fp.status, fp.asking_price, fp.sold_price, fp.title, fp.description,
+        fp.property_type, fp.parcel_no,
+        ST_AsGeoJSON(ST_Transform(p.geometry, 4326)) AS geom,
+        ST_X(ST_Transform(ST_Centroid(p.geometry), 4326)) AS longitude,
+        ST_Y(ST_Transform(ST_Centroid(p.geometry), 4326)) AS latitude
+      FROM firm_properties fp
+      JOIN properties p ON p.parcel_no = fp.parcel_no
+      WHERE fp.firm_id = $1
+        AND fp.property_type = 'land'
+        ${status && status !== 'all' ? `AND fp.status = $2` : ``}
     `;
-    const params: any[] = [user.firm_id];
 
-    if (status && typeof status === "string" && status.toLowerCase() !== "all") {
-      sql += ` AND fp.status = $2`;
-      params.push(status);
-    }
+    // APARTMENTS (point) -----------------------------------------------
+    const aptSql = `
+      SELECT
+        fp.id AS fp_id,
+        fp.status, fp.asking_price, fp.rent_price, fp.title, fp.description,
+        fp.property_type, fp.unit_id,
+        ST_AsGeoJSON(ST_SetSRID(ST_MakePoint(u.longitude::double precision, u.latitude::double precision), 4326)) AS geom,
+        u.longitude::double precision AS longitude,
+        u.latitude ::double precision AS latitude
+      FROM firm_properties fp
+      JOIN unit_properties u ON u.unit_id = fp.unit_id
+      WHERE fp.firm_id = $1
+        AND fp.property_type = 'apartment'
+        ${status && status !== 'all' ? `AND fp.status = $2` : ``}
+    `;
 
-    const { rows } = await pool.query(sql, params);
+    // HOUSES (point) ---------------------------------------------------
+    const houseSql = `
+      SELECT
+        fp.id AS fp_id,
+        fp.status, fp.asking_price, fp.rent_price, fp.title, fp.description,
+        fp.property_type, fp.house_id,
+        ST_AsGeoJSON(ST_SetSRID(ST_MakePoint(h.longitude, h.latitude), 4326)) AS geom,
+        h.longitude AS longitude,
+        h.latitude  AS latitude
+      FROM firm_properties fp
+      JOIN house_properties h ON h.house_id = fp.house_id
+      WHERE fp.firm_id = $1
+        AND fp.property_type = 'house'
+        ${status && status !== 'all' ? `AND fp.status = $2` : ``}
+    `;
 
-    const features = rows.map(r => ({
+    const params = [user.firm_id, status];
+    const [land, apts, houses] = await Promise.all([
+      pool.query(landSql,  status && status !== 'all' ? params : [user.firm_id]),
+      pool.query(aptSql,   status && status !== 'all' ? params : [user.firm_id]),
+      pool.query(houseSql, status && status !== 'all' ? params : [user.firm_id]),
+    ]);
+
+    const toFeature = (r: any) => ({
       type: "Feature",
-      geometry: JSON.parse(r.geojson),
+      geometry: JSON.parse(r.geom),
       properties: {
-        parcel_no   : r.parcel_no,
+        fp_id       : r.fp_id,
+        parcel_no   : r.parcel_no ?? null,
+        property_type: r.property_type,             // 'land' | 'apartment' | 'house'
         status      : r.status,
         asking_price: r.asking_price,
-        sold_price  : r.sold_price,
+        sold_price  : r.sold_price ?? null,
+        rent_price  : r.rent_price ?? null,
         title       : r.title,
         description : r.description,
-        firm_saved  : true,
-        latitude    : r.latitude,
         longitude   : r.longitude,
+        latitude    : r.latitude,
+        firm_saved  : true,                         // your FE relies on this
       },
-    }));
+      id: r.parcel_no || `${r.property_type}-${r.fp_id}`,
+    });
+
+    const features = [
+      ...land.rows.map(toFeature),
+      ...apts.rows.map(toFeature),
+      ...houses.rows.map(toFeature),
+    ];
 
     res.json({ type: "FeatureCollection", features });
   } catch (err) {
@@ -89,6 +131,7 @@ export const getFirmPropertiesGeojson: RequestHandler = async (req, res, next) =
     next(err);
   }
 };
+
 
 /* ────────────────────────────────────────────────────────────────── */
 /* POST /firm-properties                                             */
@@ -169,7 +212,7 @@ export const getFirmProperties: RequestHandler = async (req, res, next) => {
              fp.asking_price, fp.sold_price, fp.sold_date,
              fp.title, fp.description,
              fp.created_at, fp.updated_at,
-             p.latitude, p.longitude, p.area_namee, p.block_no
+             p.latitude, p.longitude, p.area_namee, p.block_no, p.shape_area
         FROM firm_properties fp
    LEFT JOIN properties p ON fp.parcel_no = p.parcel_no
        WHERE fp.firm_id = $1

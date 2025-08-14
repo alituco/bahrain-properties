@@ -92,3 +92,38 @@ export const ensureParcel = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'An unknown error occurred' });
   }
 };
+
+
+export const getParcelsAround = async (req: Request, res: Response) => {
+  try {
+    const { parcelNo } = req.params;
+    // 200m radius in SRID 20439 (meters). Adjust as needed.
+    const radiusMeters = Number(req.query.radius ?? 200);
+
+    const sql = `
+      WITH target AS (
+        SELECT geometry
+        FROM properties
+        WHERE parcel_no = $1
+      )
+      SELECT jsonb_build_object(
+        'type','FeatureCollection',
+        'features', COALESCE(jsonb_agg(
+          jsonb_build_object(
+            'type','Feature',
+            'geometry', ST_AsGeoJSON(ST_Transform(p.geometry, 4326))::jsonb,
+            'properties', jsonb_build_object('parcel_no', p.parcel_no)
+          )
+        ), '[]'::jsonb)
+      ) AS fc
+      FROM properties p, target t
+      WHERE p.parcel_no <> $1
+        AND ST_DWithin(p.geometry, t.geometry, $2)
+    `;
+    const { rows } = await pool.query(sql, [parcelNo, radiusMeters]);
+    return res.json(rows[0].fc);
+  } catch (e) {
+    console.error("getParcelsAround error:", e);
+    res.status(500).json({ error: "Server error" });
+  }
+};

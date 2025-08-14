@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Card, Row, Col, Form, Button, Spinner } from "react-bootstrap";
+import { Card, Row, Col, Form, Button, Spinner, OverlayTrigger, Tooltip } from "react-bootstrap";
 import SpkAlert from "@/shared/@spk-reusable-components/reusable-uielements/spk-alert";
 
 const API = process.env.NEXT_PUBLIC_API_URL!;
@@ -54,10 +54,12 @@ const PropertyInfoCard: React.FC<Props> = ({ parcelNo }) => {
         <Row className="gy-2">
           <Col sm={6}><b>Parcel No:</b> {parcelNo}</Col>
           <Col sm={6}><b>Shape Area (m²):</b> {data.shape_area}</Col>
-          <Col sm={6}><b>Latitude:</b> {data.latitude}</Col>
-          <Col sm={6}><b>Longitude:</b> {data.longitude}</Col>
           <Col sm={6}><b>NZP Code:</b> {data.nzp_code}</Col>
           <Col sm={6}><b>Block No:</b> {data.block_no}</Col>
+          <Col sm={6}><b>Area Name:</b> {data.area_namee}</Col>
+          <Col sm={6}><b></b></Col>
+          <Col sm={6}><b>Latitude:</b> {data.latitude}</Col>
+          <Col sm={6}><b>Longitude:</b> {data.longitude}</Col>
         </Row>
 
         <hr className="my-3"/>
@@ -65,22 +67,26 @@ const PropertyInfoCard: React.FC<Props> = ({ parcelNo }) => {
         <Row className="gy-3">
           <Col md={4}>
             <Form.Label>Roads</Form.Label>
-            <Form.Control value={roads} onChange={e=>setRoads(e.target.value)} />
-          </Col>
-          <Col md={4}>
-            <Form.Label>Number of Roads</Form.Label>
-            <Form.Control
-              type="number"
-              min={0}
-              value={numRoads}
-              onChange={e=>setNumRoads(+e.target.value)}
-            />
+            <Form.Control disabled={true} value={roads} onChange={e=>setRoads(e.target.value)} />
           </Col>
           <Col md={4} className="d-flex align-items-end">
-            <Button disabled={predicting} onClick={handlePredict}>
-              {predicting && <Spinner size="sm" className="me-1"/>}
-              Predict
-            </Button>
+          
+          <OverlayTrigger
+            placement="top"
+            overlay={<Tooltip id="coming-soon-tooltip">Coming Soon</Tooltip>}
+          >
+            <span className="d-inline-block">
+              <Button
+                disabled
+                onClick={handlePredict}
+                style={{ pointerEvents: 'none' }} // keep disabled look but allow tooltip
+              >
+                {predicting && <Spinner size="sm" className="me-1" />}
+                Predict
+              </Button>
+            </span>
+          </OverlayTrigger>
+
           </Col>
         </Row>
 

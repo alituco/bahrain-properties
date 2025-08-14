@@ -9,10 +9,18 @@ import SpkButton from '@/shared/@spk-reusable-components/reusable-uielements/spk
 import SpkAlert  from '@/shared/@spk-reusable-components/reusable-uielements/spk-alert';
 
 const API        = process.env.NEXT_PUBLIC_API_URL!;
-const STATUSES   = ['listed','potential buyer','closing deal','paperwork','sold'];
 const MAX_PHOTOS = 8;
 
-/* ---------- types ------------------------------------------------ */
+/* Display labels are Capitalized; values are saved in lowercase */
+const STATUS_OPTIONS = [
+  { value: 'saved',            label: 'Saved' },
+  { value: 'listed',           label: 'Listed' },
+  { value: 'potential buyer',  label: 'Potential Buyer' },
+  { value: 'closing deal',     label: 'Closing Deal' },
+  { value: 'paperwork',        label: 'Paperwork' },
+  { value: 'sold',             label: 'Sold' },
+];
+
 interface Props  { parcelNo:string; afterSave?:()=>void; }
 interface Record {
   id:number; status:string; title:string|null; description:string|null;
@@ -22,40 +30,40 @@ interface Record {
 interface Img { id:number; url:string; }
 
 const todayISO = () => new Date().toISOString().split('T')[0];
+const labelForStatus = (val:string) =>
+  STATUS_OPTIONS.find(s => s.value.toLowerCase() === (val||'').toLowerCase())?.label
+  ?? (val ? val.replace(/\b\w/g, c => c.toUpperCase()) : '—');
 
-/* ---------------------------------------------------------------- */
+const REQUIRE_FIELDS = new Set(['saved','listed']);
+
 const FirmPropertyCard:React.FC<Props> = ({ parcelNo, afterSave }) => {
-  /* record + form ------------------------------------------------- */
   const [rec,setRec] = useState<Record|null>(null);
-  const [status,setStatus] = useState('listed');
+
+  const [status,setStatus] = useState('saved'); // save lowercase, show Capitalized
   const [title,setTitle]   = useState('');
   const [descr,setDescr]   = useState('');
   const [ask,setAsk]       = useState('');
   const [sold,setSold]     = useState('');
   const [soldDate,setSoldDate] = useState('');
 
-  /* images -------------------------------------------------------- */
-  const [imgs,setImgs]         = useState<Img[]>([]);
-  const [uploading,setUploading]= useState(false);
+  const [imgs,setImgs]           = useState<Img[]>([]);
+  const [uploading,setUploading] = useState(false);
 
-  /* ui ------------------------------------------------------------ */
   const [saving,setSaving]     = useState(false);
   const [showForm,setShowForm] = useState(false);
   const [err,setErr]           = useState<string|null>(null);
   const [preview,setPreview]   = useState<string|null>(null);
 
-  /* ---------- load record + images ------------------------------ */
   useEffect(() => {
     (async () => {
       try {
         const recRes = await fetch(`${API}/firm-properties/${parcelNo}`, { credentials:'include' });
-        if (recRes.status !== 404 && !recRes.ok)
-          throw new Error('Failed to load record');
+        if (recRes.status !== 404 && !recRes.ok) throw new Error('Failed to load record');
 
         if (recRes.status !== 404) {
           const { firmProperty: fp } = await recRes.json();
           setRec(fp);
-          setStatus(fp.status);
+          setStatus((fp.status || 'saved').toLowerCase());
           setTitle(fp.title ?? '');
           setDescr(fp.description ?? '');
           setAsk( fp.asking_price != null ? String(fp.asking_price) : '');
@@ -72,34 +80,33 @@ const FirmPropertyCard:React.FC<Props> = ({ parcelNo, afterSave }) => {
     })();
   }, [parcelNo]);
 
-  /* auto-fill sold date ------------------------------------------ */
   useEffect(() => {
     if (status==='sold' && !soldDate) setSoldDate(todayISO());
     if (status!=='sold') setSoldDate('');
-  }, [status]);                    
+  }, [status, soldDate]);
 
-  /* ---------- validation ---------------------------------------- */
   const validate = ():string|null => {
-    if (status==='listed') {
-      if (!title.trim()) return 'Title is required when the property is listed.';
-      if (!ask.trim())   return 'Asking price is required when the property is listed.';
+    if (REQUIRE_FIELDS.has(status)) {
+      if (!title.trim()) return 'Title is required when the property is Saved or Listed.';
+      if (!ask.trim())   return 'Asking price is required when the property is Saved or Listed.';
     }
     if (status==='sold') {
-      if (!sold.trim())     return 'Sold price is required when the property is sold.';
-      if (!soldDate.trim()) return 'Sold date is required when the property is sold.';
+      if (!sold.trim())     return 'Sold price is required when the property is Sold.';
+      if (!soldDate.trim()) return 'Sold date is required when the property is Sold.';
     }
     return null;
   };
 
-  /* ---------- save --------------------------------------------- */
   const save = async () => {
     const msg = validate();
     if (msg){ setErr(msg); return; }
 
     setSaving(true); setErr(null);
     const body = {
-      parcel_no:parcelNo, status,
-      title:title.trim()||null, description:descr.trim()||null,
+      parcel_no: parcelNo,
+      status, // send lowercase to backend
+      title: title.trim() || null,
+      description: descr.trim() || null,
       asking_price: ask  ? Number(ask)  : null,
       sold_price  : sold ? Number(sold) : null,
       sold_date   : soldDate || null,
@@ -109,9 +116,9 @@ const FirmPropertyCard:React.FC<Props> = ({ parcelNo, afterSave }) => {
       const url    = rec ? `${API}/firm-properties/${rec.id}` : `${API}/firm-properties`;
       const method = rec ? 'PATCH' : 'POST';
       const r = await fetch(url,{
-        method,credentials:'include',
+        method, credentials:'include',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(body)
+        body: JSON.stringify(body)
       });
       if(!r.ok) throw new Error('Save failed');
       const data = await r.json();
@@ -122,7 +129,6 @@ const FirmPropertyCard:React.FC<Props> = ({ parcelNo, afterSave }) => {
     finally{ setSaving(false); }
   };
 
-  /* ---------- image handlers ----------------------------------- */
   const upload = async (e:ChangeEvent<HTMLInputElement>)=>{
     if(!rec || !e.target.files?.length) return;
     setUploading(true);
@@ -173,7 +179,7 @@ const FirmPropertyCard:React.FC<Props> = ({ parcelNo, afterSave }) => {
               <p className="text-muted">{rec.description ?? 'No description.'}</p>
 
               <p className="text-muted mb-3">
-                Status <b>{rec.status}</b> • updated {new Date(rec.updated_at).toLocaleDateString()}
+                Status <b>{labelForStatus(rec.status)}</b> • updated {new Date(rec.updated_at).toLocaleDateString()}
               </p>
 
               <Row className="g-3 mb-3">
@@ -265,14 +271,23 @@ const FirmPropertyCard:React.FC<Props> = ({ parcelNo, afterSave }) => {
         <Modal.Body>
           <Form.Group className="mb-3">
             <Form.Label>Status</Form.Label>
-            <Form.Select value={status} onChange={e=>setStatus(e.target.value)} disabled={saving}>
-              {STATUSES.map(s=><option key={s}>{s}</option>)}
+            <Form.Select
+              value={status}
+              onChange={e=>setStatus(e.target.value.toLowerCase())}
+              disabled={saving}
+            >
+              {STATUS_OPTIONS.map(s=>(
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
             </Form.Select>
+            <div className="form-text">
+              <b>Saved</b> keeps it internal; it will not appear on the public marketplace.
+            </div>
           </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label>
-              Title {status==='listed' && <span className="text-danger ms-1">*</span>}
+              Title {(REQUIRE_FIELDS.has(status)) && <span className="text-danger ms-1">*</span>}
             </Form.Label>
             <Form.Control
               value={title}
@@ -295,7 +310,7 @@ const FirmPropertyCard:React.FC<Props> = ({ parcelNo, afterSave }) => {
 
           <Form.Group className="mb-3">
             <Form.Label>
-              Asking Price {status==='listed' && <span className="text-danger ms-1">*</span>}
+              Asking Price {(REQUIRE_FIELDS.has(status)) && <span className="text-danger ms-1">*</span>}
             </Form.Label>
             <Form.Control
               type="number" min="0"
@@ -350,7 +365,6 @@ const FirmPropertyCard:React.FC<Props> = ({ parcelNo, afterSave }) => {
           <img src={preview ?? ''} alt="" style={{width:'100%'}} />
         </Modal.Body>
       </Modal>
-
     </>
   );
 };
