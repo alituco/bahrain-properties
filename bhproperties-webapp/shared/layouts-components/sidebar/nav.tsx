@@ -42,7 +42,8 @@ export const MENUITEMS = [
     active: false,
     children: [
       { path: '/dashboard/saved-properties', type: 'link', active: false, selected: false, title: 'Land Plots' },
-      { path: '/dashboard/map', type: 'link', active: false, selected: false, title: 'Land Mappings' }
+      { path: '/dashboard/map', type: 'link', active: false, selected: false, title: 'Land Mappings' },
+      { path: '/dashboard/add-a-property', type: 'link', active: false, selected: false, title: 'Add a Land' }
     ]
   },
 

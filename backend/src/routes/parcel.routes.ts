@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getParcelData, ensureParcel, getParcelGeoData } from '../controllers/parcel.controller';
+import { getParcelData, ensureParcel, getParcelGeoData, getParcelsAround } from '../controllers/parcel.controller';
 
 const router = Router();
 
@@ -15,6 +15,10 @@ router.get('/ensure/:parcelNo', (req, res, next) => {
 
 router.get('/geo/:parcelNo', (req, res, next) => {
   getParcelGeoData(req, res).catch(next);
+});
+
+router.get("/around/:parcelNo", (req, res, next) => {
+  getParcelsAround(req, res).catch(next);
 });
 
 export default router;
