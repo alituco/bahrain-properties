@@ -96,6 +96,7 @@ export const getLandById: RequestHandler = async (req, res, next) => {
         fp.description,
         fp.asking_price,
         fp.status,
+        fp.parcel_no,
 
         /* ── parcel geometry & meta ───────────────────────────── */
         p.longitude,
