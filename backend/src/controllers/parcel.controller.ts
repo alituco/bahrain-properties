@@ -97,8 +97,8 @@ export const ensureParcel = async (req: Request, res: Response) => {
 export const getParcelsAround = async (req: Request, res: Response) => {
   try {
     const { parcelNo } = req.params;
-    // 200m radius in SRID 20439 (meters). Adjust as needed.
-    const radiusMeters = Number(req.query.radius ?? 200);
+
+    const radiusMeters = 30;
 
     const sql = `
       WITH target AS (
