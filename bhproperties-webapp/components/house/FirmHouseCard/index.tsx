@@ -12,7 +12,11 @@ const API        = process.env.NEXT_PUBLIC_API_URL!;
 const STATUSES   = ['available', 'reserved', 'leased', 'draft'];
 const MAX_PHOTOS = 8;
 
-interface Props { propertyId: number; }
+interface Props {
+  propertyId: number;
+  /** optional hook if parent wants to react after deletion (e.g. navigate away or refresh list) */
+  onDeleted?: () => void;
+}
 
 interface Record {
   id           : number;
@@ -30,7 +34,7 @@ interface Record {
 
 interface Img { id: number; url: string; }
 
-const FirmHouseCard: React.FC<Props> = ({ propertyId }) => {
+const FirmHouseCard: React.FC<Props> = ({ propertyId, onDeleted }) => {
   const [rec, setRec] = useState<Record | null>(null);
 
   /* form helpers */
@@ -42,9 +46,11 @@ const FirmHouseCard: React.FC<Props> = ({ propertyId }) => {
 
   const [uploading, setUploading] = useState(false);
   const [saving,    setSaving   ] = useState(false);
+  const [deleting,  setDeleting ] = useState(false);
   const [showForm,  setShowForm ] = useState(false);
   const [err,       setErr      ] = useState<string | null>(null);
   const [preview,   setPreview  ] = useState<string | null>(null);
+  const [deleted,   setDeleted  ] = useState(false);
 
   /* ---------- load record + images ---------- */
   useEffect(() => { (async () => {
@@ -81,39 +87,96 @@ const FirmHouseCard: React.FC<Props> = ({ propertyId }) => {
       if (rec.listing_type === 'sale') body.asking_price = price ? Number(price) : null;
       else                             body.rent_price  = price ? Number(price) : null;
 
-      await fetch(`${API}/house/${propertyId}`, {
+      const resp = await fetch(`${API}/house/${propertyId}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+      if (!resp.ok) throw new Error(await resp.text());
+      const { updatedProperty } = await resp.json();
+      setRec(updatedProperty);
       setShowForm(false);
-    } catch (e: any) { setErr(e.message); }
+    } catch (e: any) { setErr(e.message || 'Failed to save'); }
       finally        { setSaving(false); }
+  };
+
+  /* ---------- delete listing ----------- */
+  const confirmDelete = async () => {
+    if (!rec || deleting) return;
+
+    const { isConfirmed } = await Swal.fire({
+      title: 'Delete this listing?',
+      text: 'This will permanently remove the property from your firm.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#d33',
+    });
+    if (!isConfirmed) return;
+
+    try {
+      setDeleting(true);
+      const resp = await fetch(`${API}/house/${propertyId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      setDeleted(true);
+      setRec(null);
+      setImgs([]);
+      await Swal.fire({ icon: 'success', title: 'Deleted', timer: 1200, showConfirmButton: false });
+      onDeleted?.();
+    } catch (e: any) {
+      setErr(e.message || 'Failed to delete property');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   /* ---------- image upload / delete -------- */
   const upload = async (e: ChangeEvent<HTMLInputElement>) => {
     if (!rec || !e.target.files?.length) return;
     setUploading(true);
-    const fd = new FormData();
-    Array.from(e.target.files).forEach(f => fd.append('files', f));
-    await fetch(`${API}/firm-properties/${rec.id}/images`, {
-      method: 'POST',
-      credentials: 'include',
-      body: fd,
-    });
-    const ir = await fetch(`${API}/firm-properties/${rec.id}/images`, { credentials: 'include' });
-    const data = ir.ok ? await ir.json() : [];
-    setImgs(Array.isArray(data) ? data : data.images ?? []);
-    setUploading(false);
+    try {
+      const fd = new FormData();
+      Array.from(e.target.files).forEach(f => fd.append('files', f));
+      const up = await fetch(`${API}/firm-properties/${rec.id}/images`, {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      });
+      if (!up.ok) throw new Error(await up.text());
+
+      const ir = await fetch(`${API}/firm-properties/${rec.id}/images`, { credentials: 'include' });
+      const data = ir.ok ? await ir.json() : [];
+      setImgs(Array.isArray(data) ? data : data.images ?? []);
+    } catch (e:any) {
+      setErr(e.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const delImg = async (imgId: number) => {
     if (!rec) return;
-    const { isConfirmed } = await Swal.fire({ title: 'Delete this photo?', icon: 'warning', showCancelButton: true });
+    const { isConfirmed } = await Swal.fire({
+      title: 'Delete this photo?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+    });
     if (!isConfirmed) return;
-    await fetch(`${API}/firm-properties/${rec.id}/images/${imgId}`, { method: 'DELETE', credentials: 'include' });
+
+    const resp = await fetch(`${API}/firm-properties/${rec.id}/images/${imgId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!resp.ok) {
+      setErr(await resp.text());
+      return;
+    }
     setImgs(i => i.filter(x => x.id !== imgId));
   };
 
@@ -123,18 +186,46 @@ const FirmHouseCard: React.FC<Props> = ({ propertyId }) => {
       <Card className="custom-card mb-4">
         <Card.Header><div className="card-title">Firm Listing</div></Card.Header>
         <Card.Body>
-          {err && <SpkAlert variant="danger" CustomClass="mb-3" show onClose={() => setErr(null)}>{err}</SpkAlert>}
+          {err && (
+            <SpkAlert variant="danger" CustomClass="mb-3" show onClose={() => setErr(null)}>
+              {err}
+            </SpkAlert>
+          )}
+          {deleted && (
+            <SpkAlert variant="success" CustomClass="mb-3" show>
+              Property deleted.
+            </SpkAlert>
+          )}
 
           {rec ? (
             <>
-              <h5 className="fw-semibold mb-1">{rec.title ?? '—'}</h5>
-              <p className="text-muted">{rec.description ?? 'No description.'}</p>
+              <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                  <h5 className="fw-semibold mb-1">{rec.title ?? '—'}</h5>
+                  <p className="text-muted mb-2">{rec.description ?? 'No description.'}</p>
+                  <p className="text-muted mb-0">
+                    Status <b>{rec.status}</b> • updated {new Date(rec.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
 
-              <p className="text-muted mb-2">
-                Status <b>{rec.status}</b> • updated {new Date(rec.updated_at).toLocaleDateString()}
-              </p>
+                <div className="d-flex gap-2">
+                  <SpkButton Buttonvariant="primary" onClickfunc={() => setShowForm(true)}>
+                    <i className="ri-edit-line me-1" /> Edit&nbsp;Listing
+                  </SpkButton>
+                  <Button
+                    variant="danger"
+                    onClick={confirmDelete}
+                    disabled={deleting}
+                    title="Delete listing"
+                  >
+                    {deleting && <Spinner size="sm" className="me-1" />}
+                    <i className="ri-delete-bin-line me-1" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
 
-              <Row className="gy-2 mb-3">
+              <Row className="gy-2 my-3">
                 <Col sm={6}>
                   <span className="text-muted d-block">Floors</span>
                   <span className="fw-medium">{rec.floors ?? '—'}</span>
@@ -169,7 +260,9 @@ const FirmHouseCard: React.FC<Props> = ({ propertyId }) => {
                     <button
                       className="btn btn-danger btn-sm thumb-close w-100 px-2"
                       onClick={() => delImg(img.id)}
-                    >×</button>
+                    >
+                      ×
+                    </button>
                   </Col>
                 ))}
 
@@ -197,12 +290,18 @@ const FirmHouseCard: React.FC<Props> = ({ propertyId }) => {
                   </Col>
                 )}
               </Row>
-
-              <SpkButton Buttonvariant="primary" onClickfunc={() => setShowForm(true)}>
-                <i className="ri-edit-line me-1" /> Edit&nbsp;Listing
-              </SpkButton>
             </>
-          ) : <Spinner animation="border" />}
+          ) : (
+            <>
+              {!deleted ? (
+                <div className="py-3 text-center">
+                  <Spinner animation="border" />
+                </div>
+              ) : (
+                <p className="text-muted mb-0">This listing has been deleted.</p>
+              )}
+            </>
+          )}
         </Card.Body>
       </Card>
 
