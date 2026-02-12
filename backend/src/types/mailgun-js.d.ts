@@ -1,1 +1,1 @@
-declare module 'mailgun.js';
+// Mailgun removed from project.
