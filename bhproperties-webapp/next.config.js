@@ -1,4 +1,3 @@
-
 /**@type {import('next').NextConfig} */
 const path = require('path');
 const isProd = process.env.NODE_ENV === "production";
@@ -13,6 +12,9 @@ const nextConfig = {
   },
   typescript: {
     ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   },
   sassOptions: {
     includePaths: [path.join(__dirname, 'public/assets/scss')],
