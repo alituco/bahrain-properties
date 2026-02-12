@@ -1,8 +1,6 @@
 import { RequestHandler } from 'express';
 import jwt    from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import Mailgun from 'mailgun.js';
-import FormData from 'form-data';
 import path  from 'path';
 import admin from 'firebase-admin';
 
@@ -11,21 +9,16 @@ import { config }            from '../config/env';
 import { bucket }            from '../config/firebase';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 
-const mailgun = new Mailgun(FormData);
-const mg      = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY!,
-  url: process.env.MAILGUN_API_URL || undefined,
-});
-
 /* helpers */
 function generateOTP(len = 6) {
   const d = '0123456789';
   return Array.from({ length: len }, () => d[(Math.random() * d.length) | 0]).join('');
 }
 
-async function sendMail(opts: Parameters<typeof mg.messages.create>[1]) {
-  await mg.messages.create(process.env.MAILGUN_DOMAIN!, opts);
+// Mailgun removed/disabled
+async function sendMail(_opts: unknown) {
+  // no-op (email delivery disabled)
+  return;
 }
 
 /* =================================================================
@@ -269,13 +262,9 @@ export const requestEmailChange: RequestHandler = async (req, res) => {
       [user!.user_id, new_email, otp]
     );
 
-    await sendMail({
-      from: `"Manzil" <${process.env.MAILGUN_FROM}>`,
-      to: new_email,
-      subject: 'Confirm your new e-mail',
-      text: `Your OTP is ${otp}`,
-      html: `<p>Your OTP is <b>${otp}</b>. It expires in 15 min.</p>`,
-    });
+    // Email delivery disabled; OTP is generated/stored but not sent.
+    // In development you can inspect DB table `email_change_requests` to retrieve it.
+    await sendMail({ otp, to: new_email });
 
     res.json({ success:true, message:'OTP sent' });
   } catch (e) {

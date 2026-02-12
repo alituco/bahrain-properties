@@ -8,27 +8,12 @@ import LoginWithOTP from '../../auth/LoginWithOTP';
 
 const API = process.env.NEXT_PUBLIC_API_URL!;
 
-
-
 // next/router
 jest.mock('next/navigation', () => ({ useRouter: jest.fn() }));
-
-// react-google-recaptcha – inject a fake token right away
-jest.mock('react-google-recaptcha', () => {
-  const React = require('react');
-  return {
-    __esModule: true,
-    default: ({ onChange }: { onChange: (t: string) => void }) => {
-      React.useEffect(() => onChange('dummy-token'), [onChange]);
-      return <div data-testid="recaptcha-mock" />;
-    },
-  };
-});
 
 function getInput(name: string): HTMLInputElement {
   return document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
 }
-
 
 describe('LoginWithOTP flow', () => {
   it('shows OTP modal on successful login, then redirects on valid OTP', async () => {

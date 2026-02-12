@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Form,
   Modal,
   Button as RBButton,
 } from "react-bootstrap";
-import ReCAPTCHA from "react-google-recaptcha";        
 import SpkButton from "@/shared/@spk-reusable-components/reusable-uielements/spk-button";
 import SpkAlert  from "@/shared/@spk-reusable-components/reusable-uielements/spk-alert";
-import { Container, styled } from "@mui/material";
 
 export default function LoginWithOTP() {
   const router = useRouter();
@@ -23,14 +21,6 @@ export default function LoginWithOTP() {
   const [otp, setOtp]       = useState("");
   const [otpMsg, setOtpMsg] = useState("");
 
-  const recaptchaRef = useRef<ReCAPTCHA | null>(null);          
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);   
-
-  const resetCaptcha = () => {
-    recaptchaRef.current?.reset();
-    setCaptchaToken(null);
-  }
-
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
     setMsg("");
@@ -38,10 +28,6 @@ export default function LoginWithOTP() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!captchaToken) {
-      setMsg("Please complete the CAPTCHA.");
-      return;
-    }
     setMsg("Logging in…");
 
     try {
@@ -49,21 +35,18 @@ export default function LoginWithOTP() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ ...form, recaptchaToken: captchaToken }),   
+        body: JSON.stringify({ ...form }),
       });
       const d = await r.json();
       if (d.success) {
         setMsg("");
         setOtpModal(true);
-        resetCaptcha();
       } else {
         setMsg(d.message || "Login failed.");
-        resetCaptcha();
       }
     } catch (err) {
       console.error(err);
       setMsg("Network error.");
-      resetCaptcha();
     }
   }
 
@@ -147,16 +130,6 @@ export default function LoginWithOTP() {
             </a>
           </div>
         </div>
-
-        <Container className="d-flex justify-content-center">
-          <ReCAPTCHA
-            ref={recaptchaRef}
-            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-            onChange={(token) => setCaptchaToken(token)}
-            onExpired={() => setCaptchaToken(null)}
-            className="mb-2"
-          />
-        </Container>
 
         <div className="d-grid mt-2">
           <SpkButton Buttontype="submit" Buttonvariant="primary">
